@@ -130,7 +130,7 @@ const restaurantSchema = new Schema<IRestaurantDocument>({
   timestamps: true
 });
 
-// Indexes
+
 restaurantSchema.index({ name: 'text', cuisine: 'text' });
 restaurantSchema.index({ 'address.city': 1, isOpen: 1, isActive: 1 });
 

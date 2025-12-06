@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import { Category } from '../models';
 
-// @desc    Get all categories
-// @route   GET /api/categories
-// @access  Public
+
 export const getAllCategories = async (req: Request, res: Response) => {
   try {
     const categories = await Category.find({ isActive: true }).sort({ name: 1 });
@@ -20,9 +18,7 @@ export const getAllCategories = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Get single category
-// @route   GET /api/categories/:id
-// @access  Public
+
 export const getCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.findById(req.params.id);
@@ -46,9 +42,7 @@ export const getCategory = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Create category
-// @route   POST /api/categories
-// @access  Private/Admin
+
 export const createCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.create(req.body);
@@ -66,9 +60,7 @@ export const createCategory = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Update category
-// @route   PUT /api/categories/:id
-// @access  Private/Admin
+
 export const updateCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.findByIdAndUpdate(
@@ -97,9 +89,7 @@ export const updateCategory = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Delete category
-// @route   DELETE /api/categories/:id
-// @access  Private/Admin
+
 export const deleteCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.findByIdAndDelete(req.params.id);

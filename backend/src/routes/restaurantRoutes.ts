@@ -14,7 +14,7 @@ const router = Router();
 router.get('/', getAllRestaurants);
 router.get('/:id', getRestaurant);
 
-// Admin routes
+
 router.post('/', protect, authorize('admin'), createRestaurant);
 router.put('/:id', protect, authorize('admin', 'restaurant'), updateRestaurant);
 router.delete('/:id', protect, authorize('admin'), deleteRestaurant);

@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import { FoodItem, Category, Restaurant } from '../models';
 
-// @desc    Get all food items
-// @route   GET /api/food
-// @access  Public
+
 export const getAllFoodItems = async (req: Request, res: Response) => {
   try {
     const {
@@ -21,7 +19,7 @@ export const getAllFoodItems = async (req: Request, res: Response) => {
 
     const query: any = { isAvailable: true };
 
-    // Filters
+  
     if (category) query.category = category;
     if (restaurant) query.restaurant = restaurant;
     if (isVegetarian === 'true') query.isVegetarian = true;
@@ -32,12 +30,12 @@ export const getAllFoodItems = async (req: Request, res: Response) => {
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
-    // Search
+   
     if (search) {
       query.$text = { $search: search as string };
     }
 
-    // Sort
+ 
     let sortOption: any = { createdAt: -1 };
     if (sort === 'price_asc') sortOption = { price: 1 };
     if (sort === 'price_desc') sortOption = { price: -1 };
@@ -76,9 +74,7 @@ export const getAllFoodItems = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Get single food item
-// @route   GET /api/food/:id
-// @access  Public
+
 export const getFoodItem = async (req: Request, res: Response) => {
   try {
     const foodItem = await FoodItem.findById(req.params.id)
@@ -104,9 +100,7 @@ export const getFoodItem = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Create food item
-// @route   POST /api/food
-// @access  Private/Admin
+
 export const createFoodItem = async (req: Request, res: Response) => {
   try {
     console.log(req.body);
@@ -125,9 +119,7 @@ export const createFoodItem = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Update food item
-// @route   PUT /api/food/:id
-// @access  Private/Admin
+
 export const updateFoodItem = async (req: Request, res: Response) => {
   try {
     const foodItem = await FoodItem.findByIdAndUpdate(
@@ -156,9 +148,7 @@ export const updateFoodItem = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Delete food item
-// @route   DELETE /api/food/:id
-// @access  Private/Admin
+
 export const deleteFoodItem = async (req: Request, res: Response) => {
   try {
     const foodItem = await FoodItem.findByIdAndDelete(req.params.id);
@@ -182,9 +172,7 @@ export const deleteFoodItem = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Get food items by category
-// @route   GET /api/food/category/:slug
-// @access  Public
+
 export const getFoodByCategory = async (req: Request, res: Response) => {
   try {
     const category = await Category.findOne({ slug: req.params.slug });

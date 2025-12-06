@@ -20,15 +20,15 @@ import {
 } from './routes';
 import uploadRoutes from './routes/uploadRoutes';
 
-// Load env vars
+
 dotenv.config();
 
-// Connect to database
+
 connectDB();
 
 const app = express();
 
-// Middleware
+
 app.use(helmet());
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -38,12 +38,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Logging
+
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// API Routes
+
 app.use('/api/auth', authRoutes);
 app.use('/api/food', foodRoutes);
 app.use('/api/orders', orderRoutes);
@@ -54,11 +54,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Make uploads folder static
+
 const rootDir = path.resolve();
 app.use('/uploads', express.static(path.join(rootDir, '/uploads')));
 
-// Health check
+
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
@@ -67,10 +67,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handler
+
 app.use(errorHandler);
 
-// 404 handler
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -84,9 +84,9 @@ app.listen(PORT, () => {
   console.log(`
   🍔 HalkaBite Server
   ═══════════════════════════════════════
-  🚀 Server running on port ${PORT}
-  📍 Environment: ${process.env.NODE_ENV || 'development'}
-  🔗 API: http://localhost:${PORT}/api
+   Server running on port ${PORT}
+   Environment: ${process.env.NODE_ENV || 'development'}
+   API: http://localhost:${PORT}/api
   ═══════════════════════════════════════
   `);
 });

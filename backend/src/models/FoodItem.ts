@@ -101,7 +101,7 @@ const foodItemSchema = new Schema<IFoodItemDocument>({
   timestamps: true
 });
 
-// Indexes for search
+
 foodItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
 foodItemSchema.index({ category: 1, isAvailable: 1 });
 foodItemSchema.index({ restaurant: 1, isAvailable: 1 });

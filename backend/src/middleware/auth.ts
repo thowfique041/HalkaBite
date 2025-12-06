@@ -15,7 +15,7 @@ export const protect = async (
   try {
     let token: string | undefined;
 
-    // Check for token in header or cookies
+   
     if (req.headers.authorization?.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     } else if (req.cookies?.token) {
@@ -29,10 +29,10 @@ export const protect = async (
       });
     }
 
-    // Verify token
+  
     const decoded = verifyToken(token);
     
-    // Get user from token
+    
     const user = await User.findById(decoded.id);
     
     if (!user) {

@@ -45,7 +45,7 @@ const reviewSchema = new Schema<IReviewDocument>({
   timestamps: true
 });
 
-// Indexes
+
 reviewSchema.index({ foodItem: 1, createdAt: -1 });
 reviewSchema.index({ restaurant: 1, createdAt: -1 });
 reviewSchema.index({ user: 1 });

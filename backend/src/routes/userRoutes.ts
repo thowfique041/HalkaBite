@@ -9,7 +9,7 @@ import { protect, authorize } from '../middleware/auth';
 
 const router = Router();
 
-// All routes are protected and restricted to admin
+
 router.use(protect);
 router.use(authorize('admin'));
 

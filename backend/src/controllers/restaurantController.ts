@@ -2,9 +2,7 @@ import { Request, Response } from 'express';
 import { Restaurant, FoodItem } from '../models';
 import { AuthRequest } from '../middleware/auth';
 
-// @desc    Get all restaurants
-// @route   GET /api/restaurants
-// @access  Public
+
 export const getAllRestaurants = async (req: Request, res: Response) => {
   try {
     const { search, cuisine, city, isOpen, sort, page = 1, limit = 12 } = req.query;
@@ -53,9 +51,7 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Get single restaurant with menu
-// @route   GET /api/restaurants/:id
-// @access  Public
+
 export const getRestaurant = async (req: Request, res: Response) => {
   try {
     const restaurant = await Restaurant.findById(req.params.id);
@@ -67,13 +63,13 @@ export const getRestaurant = async (req: Request, res: Response) => {
       });
     }
 
-    // Get menu items
+    
     const menuItems = await FoodItem.find({ 
       restaurant: req.params.id, 
       isAvailable: true 
     }).populate('category', 'name');
 
-    // Group by category
+    
     const menuByCategory = menuItems.reduce((acc: any, item) => {
       const categoryName = (item.category as any)?.name || 'Other';
       if (!acc[categoryName]) {
@@ -98,9 +94,7 @@ export const getRestaurant = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Create restaurant
-// @route   POST /api/restaurants
-// @access  Private/Admin
+
 export const createRestaurant = async (req: AuthRequest, res: Response) => {
   try {
     const restaurant = await Restaurant.create({
@@ -121,9 +115,7 @@ export const createRestaurant = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Update restaurant
-// @route   PUT /api/restaurants/:id
-// @access  Private/Admin
+
 export const updateRestaurant = async (req: Request, res: Response) => {
   try {
     const restaurant = await Restaurant.findByIdAndUpdate(
@@ -152,9 +144,7 @@ export const updateRestaurant = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Delete restaurant
-// @route   DELETE /api/restaurants/:id
-// @access  Private/Admin
+
 export const deleteRestaurant = async (req: Request, res: Response) => {
   try {
     const restaurant = await Restaurant.findByIdAndDelete(req.params.id);
@@ -166,7 +156,7 @@ export const deleteRestaurant = async (req: Request, res: Response) => {
       });
     }
 
-    // Also delete all food items
+  
     await FoodItem.deleteMany({ restaurant: req.params.id });
 
     res.status(200).json({
@@ -181,9 +171,7 @@ export const deleteRestaurant = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Toggle restaurant open/close
-// @route   PUT /api/restaurants/:id/toggle
-// @access  Private/Admin
+
 export const toggleRestaurantStatus = async (req: Request, res: Response) => {
   try {
     const restaurant = await Restaurant.findById(req.params.id);

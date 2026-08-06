@@ -15,7 +15,7 @@ export const protect = async (
   try {
     let token: string | undefined;
 
-   
+    // Check for token in header or cookies
     if (req.headers.authorization?.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     } else if (req.cookies?.token) {
@@ -29,10 +29,10 @@ export const protect = async (
       });
     }
 
-  
+    // Verify token
     const decoded = verifyToken(token);
     
-    
+    // Get user from token
     const user = await User.findById(decoded.id);
     
     if (!user) {
@@ -62,4 +62,21 @@ export const authorize = (...roles: string[]) => {
     }
     next();
   };
+};
+
+// Adds the current user when a valid token is present, while keeping public AI/help routes accessible.
+export const optionalProtect = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.split(' ')[1]
+      : req.cookies?.token;
+    if (!token) return next();
+    const decoded = verifyToken(token);
+    const user = await User.findById(decoded.id);
+    if (!user) return res.status(401).json({ success: false, message: 'User not found' });
+    req.user = user;
+    return next();
+  } catch (_error) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired authentication token' });
+  }
 };

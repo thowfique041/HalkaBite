@@ -2,37 +2,66 @@ import { Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { FoodItem, Restaurant, Order } from '../models';
 import { AuthRequest } from '../middleware/auth';
+import dotenv from 'dotenv';
+import { detectAIResponseLanguage, getLanguageInstruction } from '../utils/aiLanguage';
+import { processCustomerMessage } from './aiPipelineService';
 
-// Initialize Gemini AI
+dotenv.config();
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
 // Process voice command with Gemini AI
 const processVoiceCommand = async (transcript: string, userId: string) => {
   try {
+    const responseLanguage = detectAIResponseLanguage(transcript);
     const prompt = `You are an AI assistant for HalkaBite, a food delivery platform. 
     User said: "${transcript}"
+
+    Language requirement: ${getLanguageInstruction(responseLanguage)}
     
     Analyze this voice command and determine the intent. Respond in JSON format with:
     {
-      "intent": "order" | "status" | "recommend" | "help" | "unknown",
+      "intent": "order" | "status" | "recommend" | "help" | "navigate" | "unknown",
       "message": "your response to the user",
-      "action": "what action should be taken"
+      "action": {
+        "type": "NAVIGATE" | "NONE",
+        "payload": "route path or null"
+      }
     }
+    
+    For navigation:
+    - "menu" -> "/menu"
+    - "orders" -> "/orders"
+    - "profile" -> "/profile"
+    - "home" -> "/"
+    - "cart" -> "/cart"
     
     Keep responses friendly and concise.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
+    let text = response.text();
+    text = text.trim();
+    if (text.startsWith('```json')) {
+      text = text.substring(7);
+    }
+    if (text.endsWith('```')) {
+      text = text.substring(0, text.length - 3);
+    }
+    text = text.trim();
 
     // Parse JSON response
     const aiResponse = JSON.parse(text);
 
     // Enhance response based on intent
+    if (aiResponse.intent === 'navigate') {
+      return aiResponse;
+    }
+
     if (aiResponse.intent === 'order') {
       const lowerTranscript = transcript.toLowerCase();
-      const foodItems = await FoodItem.find({ isAvailable: true });
+      const foodItems = await FoodItem.find({ isAvailable: true, isDeleted: { $ne: true } });
       const matchedItems = foodItems.filter(item =>
         lowerTranscript.includes(item.name.toLowerCase())
       );
@@ -52,16 +81,18 @@ const processVoiceCommand = async (transcript: string, userId: string) => {
         .sort({ createdAt: -1 });
 
       if (latestOrder) {
-        return {
-          ...aiResponse,
-          order: latestOrder,
-          message: `Your latest order (${latestOrder.orderNumber}) is ${latestOrder.orderStatus}.`
+      return {
+        ...aiResponse,
+        order: latestOrder,
+        message: responseLanguage === 'bn'
+          ? `আপনার সর্বশেষ অর্ডার (${latestOrder.orderNumber}) এখন ${latestOrder.orderStatus} অবস্থায় আছে।`
+          : `Your latest order (${latestOrder.orderNumber}) is ${latestOrder.orderStatus}.`
         };
       }
     }
 
     if (aiResponse.intent === 'recommend') {
-      const popularItems = await FoodItem.find({ isAvailable: true })
+      const popularItems = await FoodItem.find({ isAvailable: true, isDeleted: { $ne: true } })
         .sort({ rating: -1, reviewCount: -1 })
         .limit(5);
 
@@ -77,7 +108,9 @@ const processVoiceCommand = async (transcript: string, userId: string) => {
     // Fallback to basic response
     return {
       intent: 'unknown',
-      message: "I'm having trouble processing that right now. Could you please try again?",
+      message: detectAIResponseLanguage(transcript) === 'bn'
+        ? 'এই মুহূর্তে আপনার অনুরোধটি বুঝতে সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করবেন?'
+        : "I'm having trouble processing that right now. Could you please try again?",
       action: null
     };
   }
@@ -97,7 +130,14 @@ export const handleVoiceCommand = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const result = await processVoiceCommand(transcript, req.user._id);
+    const pipelineResult = await processCustomerMessage(transcript, req.user._id.toString());
+    const result = {
+      intent: pipelineResult.intent,
+      message: pipelineResult.answer,
+      recommendedFoods: pipelineResult.recommendedFoods,
+      recommendedCombos: pipelineResult.recommendedCombos,
+      action: { type: 'NONE', payload: null }
+    };
 
     res.status(200).json({
       success: true,
@@ -125,37 +165,36 @@ export const handleChat = async (req: Request, res: Response) => {
       });
     }
 
-    const prompt = `You are HalkaBite's friendly AI assistant for a food delivery platform in Bangladesh.
-    
-    Context:
-    - We deliver food from various restaurants
-    - Payment methods: Bkash, Nagad, Rocket, Cash on Delivery
-    - Average delivery time: 30-45 minutes
-    - We offer catering services
-    - Operating hours: Most restaurants 10 AM - 11 PM
-    
-    User message: "${message}"
-    
-    Provide a helpful, friendly response (2-3 sentences max). Be conversational and helpful.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const aiMessage = response.text();
+    const rawLocation = req.body?.location;
+    const location = rawLocation
+      && Number.isFinite(Number(rawLocation.lat))
+      && Number.isFinite(Number(rawLocation.lng))
+      && Number(rawLocation.lat) >= -90 && Number(rawLocation.lat) <= 90
+      && Number(rawLocation.lng) >= -180 && Number(rawLocation.lng) <= 180
+      ? { lat: Number(rawLocation.lat), lng: Number(rawLocation.lng) }
+      : undefined;
+    const pipelineResult = await processCustomerMessage(message, (req as AuthRequest).user?._id?.toString(), location);
 
     res.status(200).json({
       success: true,
       data: {
-        message: aiMessage,
+        message: pipelineResult.answer,
+        recommendedFoods: pipelineResult.recommendedFoods,
+        recommendedCombos: pipelineResult.recommendedCombos,
+        intent: pipelineResult.intent,
         sessionId: req.body.sessionId || Date.now().toString()
       }
     });
   } catch (error: any) {
     console.error('Gemini AI chat error:', error);
+    const responseLanguage = detectAIResponseLanguage(typeof req.body?.message === 'string' ? req.body.message : '');
     // Fallback response
     res.status(200).json({
       success: true,
       data: {
-        message: "I'm HalkaBite's AI assistant! I can help with menu information, delivery times, payment options, and more. How can I assist you today?",
+        message: responseLanguage === 'bn'
+          ? 'আমি HalkaBite-এর এআই সহকারী। মেনু, ডেলিভারির সময়, পেমেন্ট এবং অন্যান্য বিষয়ে সাহায্য করতে পারি। কীভাবে সাহায্য করব?'
+          : "I'm HalkaBite's AI assistant! I can help with menu information, delivery times, payment options, and more. How can I assist you today?",
         sessionId: req.body.sessionId || Date.now().toString()
       }
     });

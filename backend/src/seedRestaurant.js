@@ -4,12 +4,12 @@ const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
-
+// Define schemas matching the backend
 const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin', 'restaurant'], default: 'user' },
+    role: { type: String, enum: ['user', 'admin', 'restaurant', 'delivery'], default: 'user' },
     phone: String,
     isVerified: { type: Boolean, default: false }
 }, { timestamps: true });
@@ -45,7 +45,7 @@ const seed = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('MongoDB Connected');
 
-        
+        // Create or find admin user
         let admin = await User.findOne({ email: 'admin@halkabite.com' });
         if (!admin) {
             const salt = await bcrypt.genSalt(10);
@@ -63,7 +63,7 @@ const seed = async () => {
             console.log('Admin user already exists');
         }
 
-        
+        // Create restaurant
         const restaurant = await Restaurant.create({
             name: 'HalkaBite HQ Kitchen',
             description: 'The official kitchen of HalkaBite.',

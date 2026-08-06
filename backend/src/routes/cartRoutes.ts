@@ -10,7 +10,7 @@ import { protect } from '../middleware/auth';
 
 const router = Router();
 
-router.use(protect); 
+router.use(protect); // All cart routes require auth
 
 router.get('/', getCart);
 router.post('/items', addToCart);

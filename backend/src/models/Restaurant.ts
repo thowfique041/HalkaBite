@@ -1,11 +1,16 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { Counter } from './Counter';
 
 export interface IRestaurantDocument extends Document {
+  restaurantId?: string;
   name: string;
   description: string;
   address: {
+    restaurantAddress?: string;
+    area?: string;
     street: string;
     city: string;
+    district?: string;
     state: string;
     zipCode: string;
     country: string;
@@ -24,7 +29,14 @@ export interface IRestaurantDocument extends Document {
   deliveryTime: string;
   deliveryFee: number;
   minimumOrder: number;
+  deliveryRadius: number;
   isOpen: boolean;
+  acceptingOrders: boolean;
+  weeklyHoliday?: string;
+  notificationPreferences: {
+    newOrders: boolean; newReviews: boolean; orderCancellation: boolean;
+    paymentReceived: boolean; deliveryUpdates: boolean; adminAnnouncements: boolean;
+  };
   isActive: boolean;
   openingHours: Array<{
     day: string;
@@ -36,8 +48,11 @@ export interface IRestaurantDocument extends Document {
 }
 
 const addressSchema = new Schema({
+  restaurantAddress: { type: String, trim: true, maxlength: 300 },
+  area: { type: String, trim: true, maxlength: 150 },
   street: { type: String, required: true },
   city: { type: String, required: true },
+  district: { type: String, trim: true, maxlength: 150 },
   state: { type: String, required: true },
   zipCode: { type: String, required: true },
   country: { type: String, default: 'Bangladesh' },
@@ -55,6 +70,7 @@ const openingHoursSchema = new Schema({
 }, { _id: false });
 
 const restaurantSchema = new Schema<IRestaurantDocument>({
+  restaurantId: { type: String, unique: true, sparse: true, immutable: true, index: true },
   name: {
     type: String,
     required: [true, 'Restaurant name is required'],
@@ -112,9 +128,20 @@ const restaurantSchema = new Schema<IRestaurantDocument>({
     default: 100,
     min: 0
   },
+  deliveryRadius: { type: Number, default: 5, min: 0, max: 100 },
   isOpen: {
     type: Boolean,
     default: true
+  },
+  acceptingOrders: { type: Boolean, default: true },
+  weeklyHoliday: { type: String, enum: ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], default: '' },
+  notificationPreferences: {
+    newOrders: { type: Boolean, default: true },
+    newReviews: { type: Boolean, default: true },
+    orderCancellation: { type: Boolean, default: true },
+    paymentReceived: { type: Boolean, default: true },
+    deliveryUpdates: { type: Boolean, default: true },
+    adminAnnouncements: { type: Boolean, default: true }
   },
   isActive: {
     type: Boolean,
@@ -130,8 +157,23 @@ const restaurantSchema = new Schema<IRestaurantDocument>({
   timestamps: true
 });
 
-
+// Indexes
 restaurantSchema.index({ name: 'text', cuisine: 'text' });
 restaurantSchema.index({ 'address.city': 1, isOpen: 1, isActive: 1 });
+restaurantSchema.pre('save', async function () {
+  if (!this.restaurantId) {
+    await Counter.findByIdAndUpdate(
+      'restaurantId',
+      { $setOnInsert: { sequence: 100000 } },
+      { upsert: true, new: true, setDefaultsOnInsert: false }
+    );
+    const counter = await Counter.findByIdAndUpdate(
+      'restaurantId',
+      { $inc: { sequence: 1 } },
+      { upsert: true, new: true }
+    );
+    this.restaurantId = `RST-${counter.sequence}`;
+  }
+});
 
 export const Restaurant = mongoose.model<IRestaurantDocument>('Restaurant', restaurantSchema);

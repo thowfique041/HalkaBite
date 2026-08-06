@@ -5,19 +5,21 @@ import {
   createFoodItem,
   updateFoodItem,
   deleteFoodItem,
-  getFoodByCategory
+  getFoodByCategory,
+  getMyMenuItems
 } from '../controllers/foodController';
-import { protect, authorize } from '../middleware/auth';
+import { protect, authorize, optionalProtect } from '../middleware/auth';
 
 const router = Router();
 
-router.get('/', getAllFoodItems);
+router.get('/', optionalProtect, getAllFoodItems);
 router.get('/category/:slug', getFoodByCategory);
-router.get('/:id', getFoodItem);
+router.get('/manage/mine', protect, authorize('restaurant'), getMyMenuItems);
+router.get('/:id', optionalProtect, getFoodItem);
 
-// Admin routes
-router.post('/', protect, authorize('admin', 'restaurant'), createFoodItem);
-router.put('/:id', protect, authorize('admin', 'restaurant'), updateFoodItem);
+// Restaurant owners only - can add, update, and delete their items
+router.post('/', protect, authorize('restaurant'), createFoodItem);
+router.put('/:id', protect, authorize('restaurant'), updateFoodItem);
 router.delete('/:id', protect, authorize('admin', 'restaurant'), deleteFoodItem);
 
 export default router;

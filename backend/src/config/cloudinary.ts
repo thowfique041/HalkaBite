@@ -16,7 +16,7 @@ export const storage = new CloudinaryStorage({
         folder: 'halkabite/uploads',
         allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
         transformation: [{ width: 500, height: 500, crop: 'limit' }],
-    } as any, 
+    } as any, // Type assertion needed due to some type definition mismatches in the library
 });
 
 export default cloudinary;

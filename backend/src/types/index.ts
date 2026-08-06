@@ -5,7 +5,7 @@ export interface IUser {
   name: string;
   email: string;
   password: string;
-  role: 'user' | 'admin' | 'restaurant';
+  role: 'user' | 'admin' | 'restaurant' | 'delivery';
   phone?: string;
   address?: IAddress;
   avatar?: string;

@@ -6,4 +6,10 @@ export { default as categoryRoutes } from './categoryRoutes';
 export { default as restaurantRoutes } from './restaurantRoutes';
 export { default as aiRoutes } from './aiRoutes';
 export { default as userRoutes } from './userRoutes';
-
+export { default as reviewRoutes } from './reviewRoutes';
+export { default as adminRoutes } from './adminRoutes';
+export { default as deliveryRoutes } from './deliveryRoutes';
+export { default as notificationRoutes } from './notificationRoutes';
+export { default as campaignRoutes } from './campaignRoutes';
+export { default as locationRoutes } from './locationRoutes';
+export { default as restaurantNameChangeRoutes } from './restaurantNameChangeRoutes';

@@ -6,7 +6,12 @@ export interface IOrderDocument extends Document {
   restaurant: mongoose.Types.ObjectId;
   items: Array<{
     foodItem: mongoose.Types.ObjectId;
+    foodId?: mongoose.Types.ObjectId;
     name: string;
+    foodName?: string;
+    foodImage?: string;
+    foodPrice?: number;
+    restaurantId?: mongoose.Types.ObjectId;
     quantity: number;
     price: number;
     specialInstructions?: string;
@@ -33,6 +38,22 @@ export interface IOrderDocument extends Document {
   specialInstructions?: string;
   estimatedDeliveryTime?: Date;
   actualDeliveryTime?: Date;
+  deliveryPerson?: mongoose.Types.ObjectId;
+  deliveryStatus?: 'accepted' | 'going_to_restaurant' | 'picked_up' | 'on_the_way' | 'delivered';
+  deliveryEarning?: number;
+  rejectedBy: mongoose.Types.ObjectId[];
+  deliveryManSnapshot?: { id: string; name: string };
+  assignedAt?: Date;
+  pickupTime?: Date;
+  deliveryInvalidatedAt?: Date;
+  deliveryInvalidReason?: 'customer_missing' | 'restaurant_missing' | 'restaurant_inactive' | 'restaurant_unavailable';
+  deliveryAuditTrail: Array<{
+    event: 'assigned' | 'status_changed' | 'reassigned';
+    status: string;
+    deliveryManId: string;
+    deliveryManName: string;
+    at: Date;
+  }>;
   transactionId?: string;
   isCatering: boolean;
   cateringDetails?: {
@@ -49,7 +70,12 @@ const orderItemSchema = new Schema({
     ref: 'FoodItem',
     required: true
   },
+  foodId: { type: Schema.Types.ObjectId, immutable: true },
   name: { type: String, required: true },
+  foodName: { type: String, immutable: true },
+  foodImage: { type: String, immutable: true },
+  foodPrice: { type: Number, min: 0, immutable: true },
+  restaurantId: { type: Schema.Types.ObjectId, immutable: true },
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true },
   specialInstructions: String
@@ -126,6 +152,40 @@ const orderSchema = new Schema<IOrderDocument>({
   specialInstructions: String,
   estimatedDeliveryTime: Date,
   actualDeliveryTime: Date,
+  deliveryPerson: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deliveryStatus: {
+    type: String,
+    enum: ['accepted', 'going_to_restaurant', 'picked_up', 'on_the_way', 'delivered']
+  },
+  deliveryEarning: {
+    type: Number,
+    min: 0
+  },
+  rejectedBy: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  deliveryManSnapshot: {
+    id: { type: String, immutable: true },
+    name: { type: String, immutable: true }
+  },
+  assignedAt: Date,
+  pickupTime: Date,
+  deliveryInvalidatedAt: Date,
+  deliveryInvalidReason: {
+    type: String,
+    enum: ['customer_missing', 'restaurant_missing', 'restaurant_inactive', 'restaurant_unavailable']
+  },
+  deliveryAuditTrail: [{
+    event: { type: String, enum: ['assigned', 'status_changed', 'reassigned'], required: true },
+    status: { type: String, required: true },
+    deliveryManId: { type: String, required: true },
+    deliveryManName: { type: String, required: true },
+    at: { type: Date, required: true, default: Date.now }
+  }],
   transactionId: String,
   isCatering: {
     type: Boolean,
@@ -141,7 +201,7 @@ const orderSchema = new Schema<IOrderDocument>({
   timestamps: true
 });
 
-
+// Generate order number before saving
 orderSchema.pre('save', async function() {
   if (!this.orderNumber) {
     const date = new Date();
@@ -154,9 +214,10 @@ orderSchema.pre('save', async function() {
   }
 });
 
-
+// Indexes
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ restaurant: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1 });
+orderSchema.index({ deliveryPerson: 1, deliveryStatus: 1 });
 
 export const Order = mongoose.model<IOrderDocument>('Order', orderSchema);

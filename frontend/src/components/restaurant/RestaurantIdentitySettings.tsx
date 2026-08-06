@@ -1,0 +1,24 @@
+import React, { useState } from 'react';
+import { BadgeCheck, Building2, KeyRound, LockKeyhole, X } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { useGetMyNameChangeRequestsQuery, useSubmitNameChangeRequestMutation, useVerifyRestaurantPasswordMutation } from '../../store/api/restaurantIdentityApi';
+
+const RestaurantIdentitySettings: React.FC<{ currentName: string }> = ({ currentName }) => {
+  const { data, isLoading } = useGetMyNameChangeRequestsQuery();
+  const [verify, { isLoading: verifying }] = useVerifyRestaurantPasswordMutation();
+  const [submit, { isLoading: submitting }] = useSubmitNameChangeRequestMutation();
+  const [open, setOpen] = useState(false), [step, setStep] = useState<1|2>(1);
+  const [password, setPassword] = useState(''), [requestedName, setRequestedName] = useState(''), [reason, setReason] = useState('');
+  const pending = data?.data.requests.find(request => request.status === 'pending');
+  const close = () => { setOpen(false); setStep(1); setPassword(''); setRequestedName(''); setReason(''); };
+  const verifyIdentity = async () => { try { await verify({password}).unwrap(); setStep(2); toast.success('Identity verified'); } catch(error:any) { toast.error(error?.data?.message || 'Verification failed'); } };
+  const send = async () => { if (requestedName.trim().length < 2 || !reason.trim()) return toast.error('Enter a valid new name and reason'); try { await submit({password,requestedName:requestedName.trim(),reason:reason.trim()}).unwrap(); toast.success('Request submitted for admin approval'); close(); } catch(error:any) { toast.error(error?.data?.message || 'Unable to submit request'); } };
+  return <>
+    <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><span className="text-xs uppercase tracking-wider text-white/45">Restaurant ID</span><div className="mt-2 flex items-center gap-2 font-mono text-lg"><BadgeCheck className="w-5 h-5 text-primary-400"/>{isLoading?'Generating…':data?.data.restaurantId || 'Unavailable'}</div><p className="text-xs text-white/35 mt-2">Permanent · Read only</p></div>
+      <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4"><span className="text-xs uppercase tracking-wider text-white/45">Restaurant Name</span><div className="mt-2 flex items-center gap-2 font-semibold"><Building2 className="w-5 h-5 text-primary-400"/>{data?.data.currentName || currentName}</div>{pending?<span className="inline-flex mt-3 rounded-full bg-yellow-500/15 text-yellow-300 px-3 py-1 text-xs">● Name Change Request Pending</span>:<button type="button" onClick={()=>setOpen(true)} className="mt-3 text-sm text-primary-400 hover:text-primary-300">Change Restaurant Name →</button>}</div>
+    </div>
+    {open&&<div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md grid place-items-center p-4"><div className="card w-full max-w-lg p-7 border border-white/10"><button onClick={close} className="float-right text-white/50 hover:text-white"><X/></button><LockKeyhole className="w-11 h-11 p-2.5 rounded-xl bg-primary-500/15 text-primary-400"/><h2 className="text-xl font-bold mt-4">{step===1?'Verify your identity':'Request a name change'}</h2>{step===1?<div className="mt-5"><p className="text-sm text-white/50 mb-4">Enter your current password before continuing.</p><input autoFocus type="password" className="input" placeholder="Current password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&verifyIdentity()}/><button type="button" disabled={!password||verifying} onClick={verifyIdentity} className="btn btn-primary w-full mt-4"><KeyRound className="w-4 h-4 mr-2"/>{verifying?'Verifying…':'Verify Password'}</button></div>:<div className="space-y-4 mt-5"><label className="block"><span className="text-sm text-white/55">Current Restaurant Name</span><input readOnly className="input mt-2 opacity-65" value={data?.data.currentName||currentName}/></label><label className="block"><span className="text-sm text-white/55">New Restaurant Name</span><input autoFocus className="input mt-2" maxLength={100} value={requestedName} onChange={e=>setRequestedName(e.target.value)}/></label><label className="block"><span className="text-sm text-white/55">Reason for Change</span><textarea className="input mt-2 min-h-28" maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label><p className="text-xs text-white/40">Your current name stays unchanged until an administrator approves this request.</p><button type="button" disabled={submitting||requestedName.trim().length<2||!reason.trim()} onClick={send} className="btn btn-primary w-full">{submitting?'Submitting…':'Submit Request'}</button></div>}</div></div>}
+  </>;
+};
+export default RestaurantIdentitySettings;

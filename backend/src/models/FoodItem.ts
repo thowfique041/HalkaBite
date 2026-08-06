@@ -9,6 +9,8 @@ export interface IFoodItemDocument extends Document {
   image: string;
   images?: string[];
   isAvailable: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
   isVegetarian: boolean;
   isSpicy: boolean;
   preparationTime: number;
@@ -61,6 +63,8 @@ const foodItemSchema = new Schema<IFoodItemDocument>({
     type: Boolean,
     default: true
   },
+  isDeleted: { type: Boolean, default: false, index: true },
+  deletedAt: Date,
   isVegetarian: {
     type: Boolean,
     default: false
@@ -101,7 +105,7 @@ const foodItemSchema = new Schema<IFoodItemDocument>({
   timestamps: true
 });
 
-
+// Indexes for search
 foodItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
 foodItemSchema.index({ category: 1, isAvailable: 1 });
 foodItemSchema.index({ restaurant: 1, isAvailable: 1 });

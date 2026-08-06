@@ -33,6 +33,11 @@ export const errorHandler = (
     error.statusCode = 400;
   }
 
+  if (err.name === 'MulterError' || /Only JPEG, PNG, and WebP/.test(err.message || '')) {
+    error.message = err.code === 'LIMIT_FILE_SIZE' ? 'Image must be 5 MB or smaller' : err.message;
+    error.statusCode = 400;
+  }
+
   // JWT error
   if (err.name === 'JsonWebTokenError') {
     error.message = 'Invalid token';

@@ -4,12 +4,14 @@ import { generateToken } from '../utils/jwt';
 import { sendWelcomeEmail } from '../utils/email';
 import { AuthRequest } from '../middleware/auth';
 
-
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    
+    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -18,7 +20,7 @@ export const register = async (req: Request, res: Response) => {
       });
     }
 
-    
+    // Create user
     const user = await User.create({
       name,
       email,
@@ -26,18 +28,18 @@ export const register = async (req: Request, res: Response) => {
       phone
     });
 
- 
+    // Generate token
     const token = generateToken(user);
 
-    
+    // Send welcome email (don't wait for it)
     sendWelcomeEmail(email, name).catch(console.error);
 
- 
+    // Set cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     res.status(201).json({

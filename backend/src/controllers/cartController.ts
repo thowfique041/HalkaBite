@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import { Cart, FoodItem } from '../models';
 import { AuthRequest } from '../middleware/auth';
 
-
+// @desc    Get user cart
+// @route   GET /api/cart
+// @access  Private
 export const getCart = async (req: AuthRequest, res: Response) => {
   try {
     let cart = await Cart.findOne({ user: req.user._id })
@@ -16,7 +18,7 @@ export const getCart = async (req: AuthRequest, res: Response) => {
       cart = await Cart.create({ user: req.user._id, items: [] });
     }
 
-  
+    // Calculate totals
     let subtotal = 0;
     const validItems = cart.items.filter((item: any) => {
       if (item.foodItem && item.foodItem.isAvailable) {
@@ -48,7 +50,9 @@ export const getCart = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
+// @desc    Add item to cart
+// @route   POST /api/cart/items
+// @access  Private
 export const addToCart = async (req: AuthRequest, res: Response) => {
   try {
     const { foodItemId, quantity = 1, specialInstructions } = req.body;
@@ -61,7 +65,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (!foodItem.isAvailable) {
+    if (!foodItem.isAvailable || foodItem.isDeleted) {
       return res.status(400).json({
         success: false,
         message: 'Food item is not available'
@@ -78,7 +82,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    
+    // Check if item from different restaurant
     if (cart.restaurant && cart.restaurant.toString() !== foodItem.restaurant._id.toString()) {
       return res.status(400).json({
         success: false,
@@ -87,7 +91,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    
+    // Check if item already in cart
     const existingItemIndex = cart.items.findIndex(
       (item: any) => item.foodItem.toString() === foodItemId
     );
@@ -108,7 +112,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
     cart.restaurant = foodItem.restaurant._id;
     await cart.save();
 
-   
+    // Populate and return
     await cart.populate({
       path: 'items.foodItem',
       select: 'name price image discount'
@@ -127,7 +131,9 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
+// @desc    Update cart item quantity
+// @route   PUT /api/cart/items/:foodItemId
+// @access  Private
 export const updateCartItem = async (req: AuthRequest, res: Response) => {
   try {
     const { foodItemId } = req.params;
@@ -162,7 +168,7 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    
+    // Clear restaurant if cart is empty
     if (cart.items.length === 0) {
       cart.restaurant = undefined;
     }
@@ -182,7 +188,9 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
+// @desc    Remove item from cart
+// @route   DELETE /api/cart/items/:foodItemId
+// @access  Private
 export const removeFromCart = async (req: AuthRequest, res: Response) => {
   try {
     const { foodItemId } = req.params;
@@ -218,7 +226,9 @@ export const removeFromCart = async (req: AuthRequest, res: Response) => {
   }
 };
 
-
+// @desc    Clear cart
+// @route   DELETE /api/cart
+// @access  Private
 export const clearCart = async (req: AuthRequest, res: Response) => {
   try {
     await Cart.findOneAndUpdate(

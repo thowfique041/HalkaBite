@@ -49,7 +49,7 @@ const seedCategories = async () => {
             }
         ];
 
-        await Category.deleteMany({}); 
+        await Category.deleteMany({}); // Clear existing categories
         await Category.insertMany(categories);
 
         console.log('Categories seeded successfully');

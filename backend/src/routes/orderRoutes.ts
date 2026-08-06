@@ -6,22 +6,26 @@ import {
   updateOrderStatus,
   cancelOrder,
   getAllOrders,
-  reorder
+  reorder,
+  getRestaurantOrders,
+  streamOrderEvents
 } from '../controllers/orderController';
 import { protect, authorize } from '../middleware/auth';
 
 const router = Router();
 
-router.use(protect); 
+router.use(protect); // All order routes require auth
 
 router.post('/', createOrder);
 router.get('/', getMyOrders);
+router.get('/restaurant', authorize('restaurant'), getRestaurantOrders);
+router.get('/events/stream', streamOrderEvents);
+router.get('/admin/all', authorize('admin'), getAllOrders);
 router.get('/:id', getOrder);
 router.put('/:id/cancel', cancelOrder);
 router.post('/:id/reorder', reorder);
 
-
-router.get('/admin/all', authorize('admin'), getAllOrders);
+// Admin routes
 router.put('/:id/status', authorize('admin', 'restaurant'), updateOrderStatus);
 
 export default router;

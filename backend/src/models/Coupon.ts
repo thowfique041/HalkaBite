@@ -51,7 +51,7 @@ const couponSchema = new Schema<ICouponDocument>({
   },
   usageLimit: {
     type: Number,
-    default: -1 
+    default: -1 // -1 means unlimited
   },
   usedCount: {
     type: Number,
@@ -69,7 +69,7 @@ const couponSchema = new Schema<ICouponDocument>({
   timestamps: true
 });
 
-
+// Indexes
 couponSchema.index({ code: 1, isActive: 1 });
 
 export const Coupon = mongoose.model<ICouponDocument>('Coupon', couponSchema);

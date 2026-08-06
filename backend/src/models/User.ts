@@ -5,7 +5,7 @@ export interface IUserDocument extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'user' | 'admin' | 'restaurant';
+  role: 'user' | 'admin' | 'restaurant' | 'delivery';
   phone?: string;
   address?: {
     street: string;
@@ -60,7 +60,7 @@ const userSchema = new Schema<IUserDocument>({
   },
   role: {
     type: String,
-    enum: ['user', 'admin', 'restaurant'],
+    enum: ['user', 'admin', 'restaurant', 'delivery'],
     default: 'user'
   },
   phone: {
@@ -81,7 +81,7 @@ const userSchema = new Schema<IUserDocument>({
   timestamps: true
 });
 
-
+// Hash password before saving
 userSchema.pre('save', async function() {
   if (!this.isModified('password')) return;
   
@@ -89,7 +89,7 @@ userSchema.pre('save', async function() {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-
+// Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };

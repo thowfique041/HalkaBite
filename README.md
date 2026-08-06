@@ -1,64 +1,172 @@
-# 🍔 PROJECT PROPOSAL : HALKABITE 🍟
+# HalkaBite
 
-## 📜 Title
-**HALKABITE – A Full-Stack Food Delivery Website using MERN Stack**
+HalkaBite is a modern, AI-powered food delivery platform connecting customers, restaurants, delivery partners, and administrators through dedicated real-time dashboards.
 
-## 📝 DESCRIPTION
-**HalkaBite** is a responsive and modern **online food delivery platform** developed using the **MERN Stack** (MongoDB, Express.js, React.js, Node.js). 🌐
+## Features
 
-The system connects customers with nearby restaurants 🏪 and provides a smooth experience for:
-- 🍕 Browsing food
-- 🛒 Adding items to the cart
-- 💳 Completing payments securely through **Bkash, & COD**
+- Customer, restaurant, delivery, and admin dashboards
+- AI food recommendations powered by Google Gemini
+- AI chat assistant with English, Bangla, and Banglish-aware responses
+- Smart food and restaurant search
+- Real-time order tracking and notifications
+- Restaurant analytics and earnings reporting
+- Customer reviews and ratings
+- Promotional campaigns and targeted discounts
+- Secure JWT authentication and role-based access control
+- Leaflet and OpenStreetMap restaurant location management
+- Responsive desktop and mobile interface
 
-The application also includes a **powerful Admin Dashboard** 🛠️ where food items, customer orders, and sales analytics can be efficiently managed. 📈
+## Tech Stack
 
----
+### Frontend
 
-## ✨ MAIN FEATURES
+- React and TypeScript
+- Tailwind CSS
+- Redux Toolkit and RTK Query
+- Vite
 
-### 👤 User Features:
-1.  **Browse food items by category** 🍔🍟
-2.  **Add to cart and place orders** 🛍️✅
-3.  **Pay securely via Stripe, Bkash, & COD** 🔒💸
-4.  **Responsive design for mobile and desktop** 📱💻
+### Backend
 
-### 👩‍💻 Admin Features:
-1.  **Add, edit, or delete food items** ✏️🗑️
-2.  **Manage customer orders and update status** 📦🚚
-3.  **View sales and order analytics via dashboard** 📊📉
+- Node.js and Express.js
+- TypeScript
+- MongoDB and Mongoose
 
----
+### Services
 
-## 🛠️ Technology Stack:
+- Google Gemini API for AI features
+- JWT authentication
+- Leaflet, OpenStreetMap, and Nominatim for maps and geocoding
+- Cloudinary for optional image storage
+- SMTP for optional email delivery
 
-| Component | Technology | Icon |
-|-----------|------------|------|
-| **Frontend** | React.js, HTML, CSS | ⚛️ 🎨 |
-| **Backend** | Node.js, Express.js | 🟢 🚂 |
-| **Database** | MongoDB | 🍃 |
-| **Payment Gateway** | Bkash, COD | 📱 |
+## Installation
 
----
+### Prerequisites
 
-## 🎯 Goal
-To develop a **reliable and user-friendly** food delivery website that enhances customer experience and streamlines restaurant management. 🌟
+- Node.js 20 or newer
+- npm
+- MongoDB, locally or through MongoDB Atlas
 
----
+### Backend
 
-## 📊 Expected Outcomes:
-- 🚀 **Faster and easier** food ordering process for customers.
-- 📈 **Improved management** and sales tracking for restaurants.
-- 🔒 **Secure and seamless** online payment integration.
-- ⚙️ **Scalable platform** for future enhancements.
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+```
 
----
+The API runs at `http://localhost:5000` by default.
 
-## 🎓 SUBMITTED BY
+### Frontend
 
-| Name | ID |
-|------|----|
-| **MD RAKIB AHMED AKASH** | `2021331033` |
-| **THOWFIQUR BARI CHOWDHURY** | `2021331041` |
+```bash
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
 
----
+The web application runs at `http://localhost:5173` by default.
+
+## Environment Variables
+
+Never commit real credentials. Copy the provided example files and populate local `.env` files.
+
+### Backend
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `PORT` | No | API port; defaults to `5000` |
+| `NODE_ENV` | No | Runtime environment |
+| `MONGODB_URI` | Yes | MongoDB connection string |
+| `CLIENT_URL` | Yes | Allowed frontend origin |
+| `JWT_SECRET` | Yes | Strong secret used to sign authentication tokens |
+| `GEMINI_API_KEY` | For AI | Google Gemini API credential |
+| `CLOUDINARY_CLOUD_NAME` | For uploads | Cloudinary cloud name |
+| `CLOUDINARY_API_KEY` | For uploads | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | For uploads | Cloudinary API secret |
+| `SMTP_HOST` | For email | SMTP server hostname |
+| `SMTP_PORT` | For email | SMTP server port |
+| `SMTP_USER` | For email | SMTP account username |
+| `SMTP_PASS` | For email | SMTP account credential |
+| `NOMINATIM_USER_AGENT` | Recommended | Identifies geocoding requests responsibly |
+| `SEED_RESTAURANT_EMAIL` | For seeding | Development restaurant-owner email |
+| `SEED_RESTAURANT_PASSWORD` | For seeding | Development restaurant-owner password |
+
+### Frontend
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `VITE_API_URL` | Yes | Backend API base URL, such as `http://localhost:5000/api` |
+
+See [backend/.env.example](backend/.env.example) and [frontend/.env.example](frontend/.env.example).
+
+## Project Structure
+
+```text
+HalkaBite/
+├── backend/          # Express API, database models, controllers, and services
+│   └── src/
+│       ├── config/   # Database and external-service configuration
+│       ├── controllers/
+│       ├── middleware/
+│       ├── models/
+│       ├── routes/
+│       └── services/
+├── frontend/         # React application
+│   └── src/
+│       ├── components/
+│       ├── pages/    # Customer, restaurant, delivery, and admin views
+│       ├── store/    # Redux Toolkit and RTK Query
+│       └── types/
+└── presentation/     # CSE 350 presentation materials
+```
+
+## Scripts
+
+Run scripts from the relevant workspace:
+
+```bash
+npm run dev      # Development server
+npm run build    # Production build
+npm run lint     # Frontend static analysis
+```
+
+## Screenshots
+
+Screenshots can be added under `docs/screenshots/` using the following names:
+
+| Home | Customer Dashboard | Restaurant Dashboard |
+| --- | --- | --- |
+| _Screenshot coming soon_ | _Screenshot coming soon_ | _Screenshot coming soon_ |
+
+| Delivery Dashboard | Admin Dashboard | AI Chat |
+| --- | --- | --- |
+| _Screenshot coming soon_ | _Screenshot coming soon_ | _Screenshot coming soon_ |
+
+## Security
+
+- Keep all credentials in local environment files.
+- Use a strong, unique `JWT_SECRET` in production.
+- Restrict CORS to the deployed frontend origin.
+- Never use development seed credentials in production.
+- Report security concerns privately to the project maintainers.
+
+## Future Improvements
+
+- Personalized recommendations using order history and dietary preferences
+- Voice ordering and accessibility improvements
+- Smarter meal-combo generation
+- Native mobile applications
+- Automated dispatch and route optimization
+- Expanded multilingual support
+- Advanced forecasting and business intelligence
+
+## Contributing
+
+Create a focused branch, keep credentials out of commits, run the build and lint checks, and submit a clear pull request describing the change.
+
+## License
+
+This project is available under the [MIT License](LICENSE).

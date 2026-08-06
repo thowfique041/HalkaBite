@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authorize, protect } from '../middleware/auth';
+import { decideNameChangeRequest, getAllNameChangeRequests, getMyNameChangeRequests, submitRestaurantNameChange, verifyRestaurantPassword } from '../controllers/restaurantNameChangeController';
+const router = Router();
+router.post('/verify-password', protect, authorize('restaurant'), verifyRestaurantPassword);
+router.get('/mine', protect, authorize('restaurant'), getMyNameChangeRequests);
+router.post('/', protect, authorize('restaurant'), submitRestaurantNameChange);
+router.get('/', protect, authorize('admin'), getAllNameChangeRequests);
+router.patch('/:id/decision', protect, authorize('admin'), decideNameChangeRequest);
+export default router;

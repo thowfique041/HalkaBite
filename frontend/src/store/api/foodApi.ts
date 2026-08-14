@@ -1,5 +1,6 @@
 import { apiSlice } from './apiSlice';
 import type { FoodItem, Category, ApiResponse } from '../../types';
+import { uniqueById } from '../../utils/uniqueById';
 
 interface FoodFilters {
   category?: string;
@@ -26,6 +27,10 @@ interface FoodResponse {
 
 export const foodApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
+    getFeaturedFood: builder.query<ApiResponse<FoodItem | null>, void>({
+      query: () => '/foods/featured',
+      providesTags: ['Food'],
+    }),
     getFoodItems: builder.query<ApiResponse<FoodResponse>, FoodFilters>({
       query: (filters) => {
         const params = new URLSearchParams();
@@ -34,10 +39,12 @@ export const foodApi = apiSlice.injectEndpoints({
         });
         return `/food?${params.toString()}`;
       },
+      transformResponse: (response: ApiResponse<FoodResponse>) => ({ ...response, data: response.data ? { ...response.data, foodItems: uniqueById(response.data.foodItems) } : response.data }),
       providesTags: ['Food'],
     }),
     getMyMenuItems: builder.query<ApiResponse<FoodResponse>, void>({
       query: () => '/food/manage/mine',
+      transformResponse: (response: ApiResponse<FoodResponse>) => ({ ...response, data: response.data ? { ...response.data, foodItems: uniqueById(response.data.foodItems) } : response.data }),
       providesTags: ['Food'],
     }),
     getFoodItem: builder.query<ApiResponse<FoodItem>, string>({
@@ -74,6 +81,7 @@ export const foodApi = apiSlice.injectEndpoints({
 });
 
 export const {
+  useGetFeaturedFoodQuery,
   useGetFoodItemsQuery,
   useGetMyMenuItemsQuery,
   useGetFoodItemQuery,

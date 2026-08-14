@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { AIResponseLanguage, detectAIResponseLanguage } from '../utils/aiLanguage';
+import { AIServiceError, generateGeminiText, logAIError } from './geminiClient';
 
 export type CustomerIntent =
   | 'food_search'
@@ -90,8 +90,6 @@ const fallbackAnalysis = (message: string): AnalyzedIntent => {
 
 export const analyzeCustomerIntent = async (message: string): Promise<AnalyzedIntent> => {
   const language = detectAIResponseLanguage(message);
-  if (!process.env.GEMINI_API_KEY) return fallbackAnalysis(message);
-
   const prompt = `You are Stage 1 of HalkaBite's AI pipeline. Analyze intent only.
 Never answer the user. Never write conversational text. Return JSON only.
 
@@ -112,18 +110,45 @@ USER_MESSAGE:
 ${JSON.stringify(message)}`;
 
   try {
-    const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: { responseMimeType: 'application/json', temperature: 0, maxOutputTokens: 400 }
+    const text = await generateGeminiText(prompt, {
+      responseMimeType: 'application/json',
+      responseJsonSchema: {
+        type: 'object',
+        properties: {
+          intent: { type: 'string', enum: [...ALLOWED_INTENTS] },
+          filters: {
+            type: 'object',
+            properties: {
+              maxPrice: { type: 'number' }, minPrice: { type: 'number' },
+              category: { type: 'string' }, restaurant: { type: 'string' },
+              mealType: { type: 'string', enum: [...MEAL_TYPES] }, minRating: { type: 'number' },
+              keywords: { type: 'array', items: { type: 'string' } }, spicy: { type: 'boolean' },
+              vegetarian: { type: 'boolean' }, discounted: { type: 'boolean' }, nearby: { type: 'boolean' }
+            },
+            additionalProperties: false
+          }
+        },
+        required: ['intent', 'filters'], additionalProperties: false
+      },
+      thinkingConfig: { thinkingBudget: 0 },
+      temperature: 0,
+      maxOutputTokens: 400
     });
-    const result = await model.generateContent(prompt);
-    const parsed = JSON.parse(result.response.text()) as Record<string, unknown>;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(text.replace(/^```json\s*/i, '').replace(/```$/, '').trim()) as Record<string, unknown>;
+    } catch (error) {
+      logAIError('intent-response-parse', error, { responsePreview: text.slice(0, 200) });
+      throw new AIServiceError(
+        'Gemini returned invalid intent JSON.', 502, 'AI_INVALID_RESPONSE', error
+      );
+    }
     const intent = typeof parsed.intent === 'string' && ALLOWED_INTENTS.has(parsed.intent as CustomerIntent)
       ? parsed.intent as CustomerIntent
       : fallbackAnalysis(message).intent;
     return { intent, filters: sanitizeFilters(parsed.filters), language };
   } catch (error) {
-    console.error('Gemini intent analysis error:', error);
-    return fallbackAnalysis(message);
+    logAIError('intent-analysis', error, { messageLength: message.length });
+    throw error;
   }
 };

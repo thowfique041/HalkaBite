@@ -1,5 +1,6 @@
 import { apiSlice } from './apiSlice';
 import type { User, ApiResponse } from '../../types';
+import { setUser } from '../slices/authSlice';
 
 interface LoginRequest {
   email: string;
@@ -51,6 +52,23 @@ export const authApi = apiSlice.injectEndpoints({
         body: data,
       }),
       invalidatesTags: ['User'],
+      async onQueryStarted(_data, { dispatch, queryFulfilled }) {
+        try { const { data } = await queryFulfilled; if (data.data) dispatch(setUser(data.data)); } catch { /* rendered by the caller */ }
+      },
+    }),
+    uploadProfileAvatar: builder.mutation<ApiResponse<User>, FormData>({
+      query: body => ({ url: '/auth/profile/avatar', method: 'POST', body }),
+      invalidatesTags: ['User'],
+      async onQueryStarted(_data, { dispatch, queryFulfilled }) {
+        try { const { data } = await queryFulfilled; if (data.data) dispatch(setUser(data.data)); } catch { /* rendered by the caller */ }
+      },
+    }),
+    removeProfileAvatar: builder.mutation<ApiResponse<User>, void>({
+      query: () => ({ url: '/auth/profile/avatar', method: 'DELETE' }),
+      invalidatesTags: ['User'],
+      async onQueryStarted(_data, { dispatch, queryFulfilled }) {
+        try { const { data } = await queryFulfilled; if (data.data) dispatch(setUser(data.data)); } catch { /* rendered by the caller */ }
+      },
     }),
     updatePassword: builder.mutation<ApiResponse, { currentPassword: string; newPassword: string }>({
       query: (data) => ({
@@ -68,5 +86,7 @@ export const {
   useLogoutMutation,
   useGetMeQuery,
   useUpdateProfileMutation,
+  useUploadProfileAvatarMutation,
+  useRemoveProfileAvatarMutation,
   useUpdatePasswordMutation,
 } = authApi;

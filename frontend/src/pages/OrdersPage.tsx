@@ -1,27 +1,66 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Clock, ChevronRight, Search, Filter, Star } from 'lucide-react';
-import { useGetOrdersQuery } from '../store/api/orderApi';
+import { Package, Clock, ChevronRight, Search, Filter, Star, MessageCircle } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useGetOrderQuery, useGetOrdersQuery } from '../store/api/orderApi';
 import type { Order } from '../types';
 import ReviewModal from '../components/reviews/ReviewModal';
-import { useState } from 'react';
 import DeliveryAuditTrail from '../components/orders/DeliveryAuditTrail';
+import { toast } from 'react-hot-toast';
 
 const OrdersPage: React.FC = () => {
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
+  const [searchParams] = useSearchParams();
+  const focusedOrderId = searchParams.get('order');
+  const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
+  const unavailableNotice = useRef<string | null>(null);
   const { data: ordersData, isLoading, error } = useGetOrdersQuery(undefined, {
     pollingInterval: 5000,
     refetchOnFocus: true,
     refetchOnReconnect: true,
   });
-  const orders = ordersData?.data?.orders || [];
+  // API types describe valid relationships, but guard against legacy/orphaned
+  // payloads at runtime before any nested property is accessed.
+  const loadedOrders = useMemo(() => (ordersData?.data?.orders || []).filter(order =>
+    Boolean(order?.restaurant && order?.user)
+  ), [ordersData]);
+  const loadedFocusedOrder = loadedOrders.find(order => order._id === focusedOrderId);
+  const { data: focusedOrderData, isFetching: isFetchingFocusedOrder, isError: focusedOrderError } = useGetOrderQuery(
+    focusedOrderId || '',
+    { skip: !focusedOrderId || Boolean(loadedFocusedOrder) }
+  );
+  const fetchedFocusedOrder = focusedOrderData?.data?.restaurant ? focusedOrderData.data : undefined;
+  const focusedOrderUnavailable = Boolean(focusedOrderData && !focusedOrderData.data?.restaurant);
+  const orders = useMemo(() => fetchedFocusedOrder && !loadedFocusedOrder
+    ? [fetchedFocusedOrder, ...loadedOrders]
+    : loadedOrders, [fetchedFocusedOrder, loadedFocusedOrder, loadedOrders]);
+
+  useEffect(() => {
+    if (!focusedOrderId) return;
+    const found = orders.some(order => order._id === focusedOrderId);
+    if (found) {
+      unavailableNotice.current = null;
+      const scrollTimer = window.setTimeout(() => {
+        setHighlightedOrderId(focusedOrderId);
+        document.getElementById(`customer-order-${focusedOrderId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 80);
+      const highlightTimer = window.setTimeout(() => setHighlightedOrderId(null), 4000);
+      return () => { window.clearTimeout(scrollTimer); window.clearTimeout(highlightTimer); };
+    }
+    if (!isFetchingFocusedOrder && (focusedOrderError || focusedOrderUnavailable) && unavailableNotice.current !== focusedOrderId) {
+      unavailableNotice.current = focusedOrderId;
+      toast.error('This order is no longer available.');
+    }
+  }, [focusedOrderId, orders, isFetchingFocusedOrder, focusedOrderError, focusedOrderUnavailable]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered':
         return 'text-green-400 bg-green-500/10 border-green-500/20';
       case 'cancelled':
+      case 'payment_failed':
         return 'text-red-400 bg-red-500/10 border-red-500/20';
+      case 'payment_pending':
       case 'pending':
         return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
       default:
@@ -72,10 +111,11 @@ const OrdersPage: React.FC = () => {
             orders.map((order: Order, index: number) => (
               <motion.div
                 key={order._id}
+                id={`customer-order-${order._id}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="card p-6 hover:border-primary-500/30 transition-colors group"
+                className={`card p-6 hover:border-primary-500/30 transition-all duration-700 group ${highlightedOrderId===order._id?'ring-2 ring-primary-400 bg-primary-500/10 shadow-xl shadow-primary-500/20':''}`}
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
@@ -95,6 +135,8 @@ const OrdersPage: React.FC = () => {
                       <div className="text-sm text-white/80">
                         {order.items.map((item: any) => `${item.quantity}x ${item.name || 'Item'}`).join(', ')}
                       </div>
+                      {order.orderStatus === 'payment_pending' && <div className="mt-3 rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-300">Payment submitted. Your order will be sent to the restaurant after verification.</div>}
+                      {order.orderStatus === 'payment_failed' && <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">Payment could not be verified. This order was not sent for restaurant processing.</div>}
                       {order.deliveryManSnapshot && (
                         <div className="mt-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm">
                           <div className="font-medium text-blue-300">Delivery Partner: {order.deliveryManSnapshot.name}</div>
@@ -117,6 +159,9 @@ const OrdersPage: React.FC = () => {
                       <div className="text-xl font-bold text-primary-400">৳{order.totalAmount}</div>
                     </div>
                     <div className="flex flex-col gap-2">
+                      <Link to={`/messages?restaurantId=${typeof order.restaurant==='string'?order.restaurant:order.restaurant._id}&orderId=${order._id}`} className="btn btn-outline px-4 py-2 text-sm">
+                        <MessageCircle className="w-4 h-4 mr-1" /> Chat with Restaurant
+                      </Link>
                       {order.orderStatus === 'delivered' && (
                         <button onClick={() => setReviewOrder(order)} className="btn btn-primary px-4 py-2 text-sm">
                           <Star className="w-4 h-4 mr-1" /> Rate & Review

@@ -1,12 +1,48 @@
 import { Router } from 'express';
 import { getDashboardOverview, getDeliveryManagement, getDeliveryManDetails } from '../controllers/adminController';
 import { authorize, protect } from '../middleware/auth';
+import { clearAdminFeaturedFood, getAdminFeaturedFoods, setAdminFeaturedFood } from '../controllers/foodController';
+import { deleteCommissionSetting, getAdminRestaurantAnalytics, getAdminRestaurantDetails, getAdminRestaurantDirectory, getCommissionManagement, saveCommissionSetting, updateAdminRestaurantOperationalStatus, updateGlobalCommission, updateRestaurantCommission } from '../controllers/adminRestaurantPerformanceController';
+import { getAdminOrders } from '../controllers/adminOrderController';
+import { exportAdminSettings, getAdminSettings, updateAdminSettings } from '../controllers/adminSettingsController';
+import { getRestaurantCommission, getRestaurantCommissionAnalytics, getRestaurantCommissionOrders, getRestaurantCommissionPayments, getRestaurantCommissionSummary, recordRestaurantCommissionPayment } from '../controllers/adminRestaurantCommissionController';
+import { createDeliverySettlement, getDeliveryEarningSettings, getDeliveryEarnings, getDeliveryFinancialAnalytics, getDeliveryRestaurants, getDeliverySettlements, payDeliverySettlement, updateDeliveryEarningSettings } from '../controllers/adminDeliveryFinanceController';
 
 const router = Router();
 
 router.use(protect, authorize('admin'));
 router.get('/stats', getDashboardOverview);
+router.get('/orders', getAdminOrders);
+router.get('/settings', getAdminSettings);
+router.patch('/settings', updateAdminSettings);
+router.get('/settings/export', exportAdminSettings);
+router.get('/featured-food', getAdminFeaturedFoods);
+router.put('/featured-food/:foodId', setAdminFeaturedFood);
+router.delete('/featured-food', clearAdminFeaturedFood);
+router.get('/restaurants', getAdminRestaurantDirectory);
+router.get('/restaurants/:restaurantId', getAdminRestaurantDetails);
+router.get('/restaurants/:restaurantId/analytics', getAdminRestaurantAnalytics);
+router.patch('/restaurants/:restaurantId/status', updateAdminRestaurantOperationalStatus);
+router.patch('/restaurants/:restaurantId/commission', updateRestaurantCommission);
+router.get('/restaurants/:restaurantId/commission', getRestaurantCommission);
+router.get('/restaurants/:restaurantId/commission/orders', getRestaurantCommissionOrders);
+router.get('/restaurants/:restaurantId/commission/payments', getRestaurantCommissionPayments);
+router.post('/restaurants/:restaurantId/commission/payments', recordRestaurantCommissionPayment);
+router.get('/restaurants/:restaurantId/commission/summary', getRestaurantCommissionSummary);
+router.get('/restaurants/:restaurantId/commission/analytics', getRestaurantCommissionAnalytics);
+router.get('/commission', getCommissionManagement);
+router.patch('/commission', updateGlobalCommission);
+router.patch('/commission/scoped', saveCommissionSetting);
+router.delete('/commission/:settingId', deleteCommissionSetting);
 router.get('/delivery-men', getDeliveryManagement);
 router.get('/delivery-men/:id', getDeliveryManDetails);
+router.get('/delivery-men/:id/analytics', getDeliveryFinancialAnalytics);
+router.get('/delivery-men/:id/restaurants', getDeliveryRestaurants);
+router.get('/delivery-men/:id/earnings', getDeliveryEarnings);
+router.get('/delivery-men/:id/settlements', getDeliverySettlements);
+router.post('/delivery-men/:id/settlements', createDeliverySettlement);
+router.post('/delivery-men/:id/pay', payDeliverySettlement);
+router.get('/delivery-earning-settings', getDeliveryEarningSettings);
+router.patch('/delivery-earning-settings', updateDeliveryEarningSettings);
 
 export default router;

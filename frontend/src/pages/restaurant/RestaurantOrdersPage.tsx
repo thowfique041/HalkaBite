@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Package, User, Phone, MapPin } from 'lucide-react';
+import { MessageCircle, Package, User, Phone, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useGetMyRestaurantQuery, useGetRestaurantOrdersQuery } from '../../store/api/restaurantApi';
-import { useUpdateOrderStatusMutation, useCancelOrderMutation } from '../../store/api/orderApi';
+import { useUpdateOrderStatusMutation, useCancelOrderMutation, useGetOrderQuery } from '../../store/api/orderApi';
 import DeliveryAuditTrail from '../../components/orders/DeliveryAuditTrail';
 
 const RestaurantOrdersPage: React.FC = () => {
@@ -11,6 +12,8 @@ const RestaurantOrdersPage: React.FC = () => {
     const initialStatus = searchParams.get('status') || 'all';
     const focusedOrderId = searchParams.get('order');
     const [selectedStatus, setSelectedStatus] = useState(initialStatus);
+    const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
+    const unavailableNotice = useRef<string | null>(null);
 
     const { data: restaurantData, isLoading: restaurantLoading, isError: restaurantError } = useGetMyRestaurantQuery();
     const restaurantId = restaurantData?.data?._id;
@@ -22,6 +25,33 @@ const RestaurantOrdersPage: React.FC = () => {
 
     const [updateOrderStatus] = useUpdateOrderStatusMutation();
     const [cancelOrder] = useCancelOrderMutation();
+    const loadedOrders = useMemo(() => ordersData?.data?.orders || [], [ordersData]);
+    const loadedFocusedOrder = loadedOrders.find(order => order._id === focusedOrderId);
+    const { data: focusedOrderData, isFetching: isFetchingFocusedOrder, isError: focusedOrderError } = useGetOrderQuery(
+        focusedOrderId || '',
+        { skip: !focusedOrderId || Boolean(loadedFocusedOrder) || !restaurantId }
+    );
+    const fetchedFocusedOrder = focusedOrderData?.data;
+    const orders = useMemo(() => fetchedFocusedOrder && !loadedFocusedOrder
+        ? [fetchedFocusedOrder, ...loadedOrders]
+        : loadedOrders, [fetchedFocusedOrder, loadedFocusedOrder, loadedOrders]);
+
+    useEffect(() => {
+        if (!focusedOrderId) return;
+        if (orders.some(order => order._id === focusedOrderId)) {
+            unavailableNotice.current = null;
+            const scrollTimer = window.setTimeout(() => {
+                setHighlightedOrderId(focusedOrderId);
+                document.getElementById(`restaurant-order-${focusedOrderId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 80);
+            const highlightTimer = window.setTimeout(() => setHighlightedOrderId(null), 4000);
+            return () => { window.clearTimeout(scrollTimer); window.clearTimeout(highlightTimer); };
+        }
+        if (!isFetchingFocusedOrder && focusedOrderError && unavailableNotice.current !== focusedOrderId) {
+            unavailableNotice.current = focusedOrderId;
+            toast.error('This order is no longer available.');
+        }
+    }, [focusedOrderId, orders, isFetchingFocusedOrder, focusedOrderError]);
 
     const statusOptions = [
         { value: 'all', label: 'All Orders' },
@@ -78,8 +108,6 @@ const RestaurantOrdersPage: React.FC = () => {
         );
     }
 
-    const orders = ordersData?.data?.orders || [];
-
     if (isLoading) {
         return <div className="text-center py-12">Loading orders...</div>;
     }
@@ -126,7 +154,7 @@ const RestaurantOrdersPage: React.FC = () => {
                     orders.map((order) => {
                         const customer = order.user as any;
                         return (
-                            <div key={order._id} ref={element => { if (element && focusedOrderId === order._id) setTimeout(() => element.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50); }} className={`card p-6 transition ${focusedOrderId === order._id ? 'ring-2 ring-primary-500 shadow-xl shadow-primary-500/20' : ''}`}>
+                            <div key={order._id} id={`restaurant-order-${order._id}`} className={`card p-6 transition-all duration-700 ${highlightedOrderId === order._id ? 'ring-2 ring-primary-500 bg-primary-500/10 shadow-xl shadow-primary-500/20' : ''}`}>
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-white/10">
                                     <div>
                                         <h3 className="text-lg font-bold mb-1">Order #{order.orderNumber}</h3>
@@ -180,10 +208,10 @@ const RestaurantOrdersPage: React.FC = () => {
                                 <div className="mb-6">
                                     <p className="text-sm font-medium text-white/60 mb-3">Order Items</p>
                                     <div className="space-y-2">
-                                        {order.items.map((item, index) => {
+                                        {order.items.map((item) => {
                                             const foodItem = item.foodItem as any;
                                             return (
-                                                <div key={index} className="flex items-center gap-4 p-3 bg-white/5 rounded-lg">
+                                                <div key={`${typeof item.foodItem === 'string' ? item.foodItem : foodItem?._id || item.name}-${item.specialInstructions || 'default'}`} className="flex items-center gap-4 p-3 bg-white/5 rounded-lg">
                                                     <img
                                                         src={foodItem?.image || 'https://via.placeholder.com/48'}
                                                         alt={foodItem?.name || item.name}
@@ -225,7 +253,10 @@ const RestaurantOrdersPage: React.FC = () => {
                                 )}
 
                                 <div className="flex flex-wrap gap-2">
-                                    {order.orderStatus === 'pending' && (
+                                    <Link to={`/restaurant-dashboard/chats?orderId=${order._id}`} className="btn btn-outline flex-1 sm:flex-none">
+                                        <MessageCircle className="w-4 h-4 mr-2"/>Chat with Customer
+                                    </Link>
+                                    {order.orderStatus === 'pending' && (order.paymentMethod === 'cod' || order.paymentStatus === 'paid') && (
                                         <button
                                             onClick={() => handleUpdateStatus(order._id, 'confirmed')}
                                             className="btn btn-primary flex-1 sm:flex-none"
@@ -233,6 +264,7 @@ const RestaurantOrdersPage: React.FC = () => {
                                             Confirm Order
                                         </button>
                                     )}
+                                    {order.orderStatus === 'pending' && order.paymentMethod !== 'cod' && order.paymentStatus !== 'paid' && <span className="px-4 py-2 rounded-xl bg-yellow-500/10 text-yellow-300 text-sm">Awaiting payment verification</span>}
                                     {order.orderStatus === 'confirmed' && (
                                         <button
                                             onClick={() => handleUpdateStatus(order._id, 'preparing')}

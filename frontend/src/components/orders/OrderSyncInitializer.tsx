@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { apiSlice } from '../../store/api/apiSlice';
+import { parseEventData } from '../../utils/realtime';
 
 const OrderSyncInitializer = () => {
   const dispatch = useAppDispatch();
@@ -11,7 +12,8 @@ const OrderSyncInitializer = () => {
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
     const events = new EventSource(`${baseUrl}/orders/events/stream`, { withCredentials: true });
     const refreshOrders = (message: Event) => {
-      const event = JSON.parse((message as MessageEvent<string>).data) as { type?: string };
+      const event = parseEventData<{ type?: string }>(message as MessageEvent<string>);
+      if (!event) return;
       if (event.type === 'review_submitted') {
         dispatch(apiSlice.util.invalidateTags(['Review', 'Food', 'Restaurant']));
       } else {

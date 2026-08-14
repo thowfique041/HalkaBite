@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { authorize, protect } from '../middleware/auth';
+import { getChatEligibility,getConversations,getMessages,markConversationRead,sendMessage,sendTyping,setCustomerBlocked,startConversation,streamChatEvents } from '../controllers/chatController';
+const router=Router();router.use(protect,authorize('user','restaurant'));
+router.get('/events',streamChatEvents);
+router.get('/eligibility/:restaurantId',authorize('user'),getChatEligibility);
+router.get('/conversations',getConversations);
+router.post('/conversations',startConversation);
+router.get('/conversations/:id/messages',getMessages);
+router.post('/conversations/:id/messages',sendMessage);
+router.patch('/conversations/:id/read',markConversationRead);
+router.patch('/conversations/:id/block',authorize('restaurant'),setCustomerBlocked);
+router.post('/conversations/:id/typing',sendTyping);
+export default router;

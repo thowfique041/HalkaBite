@@ -3,11 +3,13 @@ import mongoose from 'mongoose';
 import { Restaurant, FoodItem, Order, User } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { ensureRestaurantIdentity } from '../services/restaurantIdentityService';
+import { changeRestaurantStatus, logRestaurantActivity } from '../services/restaurantActivityService';
 
 const RESTAURANT_PROFILE_FIELDS = [
   'name', 'description', 'address', 'phone', 'email', 'image', 'coverImage', 'cuisine',
   'deliveryTime', 'deliveryFee', 'minimumOrder', 'deliveryRadius', 'isOpen', 'acceptingOrders',
   'weeklyHoliday', 'openingHours', 'notificationPreferences'
+  , 'paymentMethods'
 ] as const;
 
 const pickRestaurantProfile = (body: Record<string, unknown>) => Object.fromEntries(
@@ -41,6 +43,7 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
 
     const [restaurants, total] = await Promise.all([
       Restaurant.find(query)
+        .select('-paymentMethods')
         .sort(sortOption)
         .skip(skip)
         .limit(Number(limit)),
@@ -72,7 +75,7 @@ export const getAllRestaurants = async (req: Request, res: Response) => {
 // @access  Public
 export const getRestaurant = async (req: Request, res: Response) => {
   try {
-    const restaurant = await Restaurant.findById(req.params.id);
+    const restaurant = await Restaurant.findById(req.params.id).select('-paymentMethods');
 
     if (!restaurant) {
       return res.status(404).json({
@@ -186,6 +189,11 @@ export const updateRestaurant = async (req: AuthRequest, res: Response) => {
       updateData,
       { new: true, runValidators: true }
     );
+    if (req.user.role === 'restaurant') {
+      await logRestaurantActivity(restaurant!._id.toString(), 'settings_updated', 'Restaurant settings were updated.', req.user._id.toString());
+      if (existingRestaurant.isOpen !== restaurant!.isOpen) await changeRestaurantStatus(restaurant!._id.toString(), restaurant!.isOpen ? 'open' : 'closed', req.user._id.toString());
+      else if (existingRestaurant.acceptingOrders !== restaurant!.acceptingOrders) await changeRestaurantStatus(restaurant!._id.toString(), restaurant!.acceptingOrders ? 'active' : 'temporarily_closed', req.user._id.toString());
+    }
 
     res.status(200).json({
       success: true,
@@ -315,8 +323,32 @@ export const updateMyRestaurantSettings = async (req: AuthRequest, res: Response
       };
     }
     if (update.openingHours && !Array.isArray(update.openingHours)) return res.status(400).json({ success: false, message: 'Invalid business hours' });
+    if (update.paymentMethods !== undefined) {
+      if (!update.paymentMethods || typeof update.paymentMethods !== 'object' || Array.isArray(update.paymentMethods)) return res.status(400).json({ success: false, message: 'Invalid payment settings' });
+      const input = update.paymentMethods as Record<string, unknown>;
+      const onlineMethods = ['bkash', 'nagad', 'rocket'] as const;
+      const normalized: Record<string, unknown> = {};
+      for (const method of onlineMethods) {
+        const value = input[method];
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return res.status(400).json({ success: false, message: `Invalid ${method} settings` });
+        const config = value as Record<string, unknown>;
+        const enabled = config.enabled === true;
+        const phoneNumber = typeof config.phoneNumber === 'string' ? config.phoneNumber.trim() : '';
+        const accountType = config.accountType === 'Agent' ? 'Agent' : 'Personal';
+        if (enabled && !/^(?:\+8801|01)[3-9]\d{8}$/.test(phoneNumber)) return res.status(400).json({ success: false, message: `Enter a valid Bangladeshi ${method} number` });
+        normalized[method] = { enabled, phoneNumber, accountType };
+      }
+      const cod = input.cod && typeof input.cod === 'object' && !Array.isArray(input.cod) ? input.cod as Record<string, unknown> : {};
+      normalized.cod = { enabled: cod.enabled === true };
+      update.paymentMethods = normalized;
+    }
+    const previousOpen = restaurant.isOpen;
+    const previousAcceptingOrders = restaurant.acceptingOrders;
     Object.assign(restaurant, update);
     await restaurant.save();
+    await logRestaurantActivity(restaurant._id.toString(), 'settings_updated', 'Restaurant owner updated settings.', req.user._id.toString());
+    if (previousOpen !== restaurant.isOpen) await changeRestaurantStatus(restaurant._id.toString(), restaurant.isOpen ? 'open' : 'closed', req.user._id.toString());
+    else if (previousAcceptingOrders !== restaurant.acceptingOrders) await changeRestaurantStatus(restaurant._id.toString(), restaurant.acceptingOrders ? 'active' : 'temporarily_closed', req.user._id.toString());
     if (email || phone) await User.findByIdAndUpdate(req.user._id, { ...(email && { email }), ...(phone && { phone }) }, { runValidators: true });
     res.json({ success: true, message: 'Restaurant settings updated successfully', data: restaurant });
   } catch (error: any) {
@@ -345,7 +377,11 @@ export const getRestaurantOrders = async (req: AuthRequest, res: Response) => {
 
     const { status, page = 1, limit = 20 } = req.query;
 
-    const query: any = { restaurant: restaurantId };
+    const query: any = {
+      restaurant: restaurantId,
+      $or: [{ paymentMethod: 'cod' }, { paymentStatus: 'paid' }],
+      orderStatus: { $nin: ['payment_pending', 'payment_failed'] }
+    };
     if (status && status !== 'all') {
       query.orderStatus = status;
     }
@@ -354,6 +390,7 @@ export const getRestaurantOrders = async (req: AuthRequest, res: Response) => {
 
     const [orders, total] = await Promise.all([
       Order.find(query)
+        .select('-deliveryEarning -deliveryPlatformShare -deliveryEarningMode -deliveryEarningValue -deliveryEarningStatus -deliverySettlement')
         .populate('user', 'name email phone')
         .populate('deliveryPerson', 'name phone avatar')
         .populate('items.foodItem', 'name image price')

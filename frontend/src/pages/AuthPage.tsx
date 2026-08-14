@@ -158,14 +158,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
               </div>
             )}
 
-            {mode === 'login' && (
-              <div className="flex justify-end">
-                <Link to="/forgot-password" className="text-sm text-primary-400 hover:text-primary-300">
-                  Forgot Password?
-                </Link>
-              </div>
-            )}
-
             <button
               type="submit"
               disabled={isLoading}

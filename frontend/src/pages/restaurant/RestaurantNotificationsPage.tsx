@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Bell, CheckCheck, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Bell, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import NotificationIcon from '../../components/notifications/NotificationIcon';
-import { useClearNotificationsMutation, useDeleteNotificationMutation, useGetNotificationsQuery, useMarkAllNotificationsReadMutation, useMarkNotificationReadMutation, type RestaurantNotification } from '../../store/api/notificationApi';
+import { useClearNotificationsMutation, useDeleteNotificationMutation, useGetNotificationsQuery, useMarkDisplayedNotificationsReadMutation, useMarkNotificationReadMutation, type RestaurantNotification } from '../../store/api/notificationApi';
 
 const filters = [
   ['all', 'All'], ['new_order', 'Orders'], ['new_review', 'Reviews'], ['delivery_assigned', 'Delivery'],
@@ -13,19 +13,28 @@ const filters = [
 const RestaurantNotificationsPage: React.FC = () => {
   const [type, setType] = useState('all'); const [page, setPage] = useState(1); const navigate = useNavigate();
   const { data, isLoading } = useGetNotificationsQuery({ page, limit: 12, type });
-  const [markRead] = useMarkNotificationReadMutation(); const [markAll] = useMarkAllNotificationsReadMutation();
+  const [markRead] = useMarkNotificationReadMutation(); const [markDisplayed] = useMarkDisplayedNotificationsReadMutation();
   const [remove] = useDeleteNotificationMutation(); const [clear] = useClearNotificationsMutation();
   const payload = data?.data; const notifications = payload?.notifications || [];
+  const viewedPages = useRef(new Set<string>());
+  useEffect(() => {
+    if (isLoading || !data) return;
+    const viewKey = `${type}:${page}`;
+    if (viewedPages.current.has(viewKey)) return;
+    viewedPages.current.add(viewKey);
+    const unreadIds = notifications.filter(item => !item.isRead).map(item => item._id);
+    if (unreadIds.length) void markDisplayed(unreadIds);
+  }, [data, isLoading, markDisplayed, notifications, page, type]);
   const open = async (item: RestaurantNotification) => {
     if (!item.isRead) await markRead(item._id);
-    navigate(item.type === 'new_review' ? (item.metadata?.foodItemId ? `/restaurant-dashboard/reviews/food/${String(item.metadata.foodItemId)}` : '/restaurant-dashboard/reviews') : item.orderId ? `/restaurant-dashboard/orders?order=${item.orderId}` : '/restaurant-dashboard');
+    navigate(item.type === 'payment_submitted' ? '/restaurant-dashboard/payments' : item.type === 'new_review' ? (item.metadata?.foodItemId ? `/restaurant-dashboard/reviews/food/${String(item.metadata.foodItemId)}` : '/restaurant-dashboard/reviews') : item.orderId ? `/restaurant-dashboard/orders?order=${item.orderId}` : '/restaurant-dashboard');
   };
   const clearAll = async () => {
     if (!window.confirm('Delete all restaurant notifications?')) return;
     await clear().unwrap(); toast.success('Notifications cleared');
   };
   return <div className="space-y-6">
-    <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"><div><p className="text-primary-400 font-medium mb-1">Stay informed in real time</p><h1 className="text-3xl font-bold">Notification Center</h1><p className="text-white/50 mt-2">Orders, reviews, delivery events, payments, and announcements.</p></div><div className="flex gap-2"><button onClick={() => markAll()} disabled={!payload?.unreadCount} className="btn btn-ghost text-sm"><CheckCheck className="w-4 h-4 mr-2" />Mark all read</button><button onClick={clearAll} disabled={!notifications.length} className="btn bg-red-500/10 text-red-300 text-sm"><Trash2 className="w-4 h-4 mr-2" />Clear all</button></div></header>
+    <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4"><div><p className="text-primary-400 font-medium mb-1">Stay informed in real time</p><h1 className="text-3xl font-bold">Notification Center</h1><p className="text-white/50 mt-2">Orders, reviews, delivery events, payments, and announcements.</p></div><button onClick={clearAll} disabled={!notifications.length} className="btn bg-red-500/10 text-red-300 text-sm self-start sm:self-auto"><Trash2 className="w-4 h-4 mr-2" />Clear all</button></header>
     <div className="flex gap-2 overflow-x-auto pb-2">{filters.map(([value,label]) => <button key={value} onClick={() => { setType(value); setPage(1); }} className={`px-4 py-2 rounded-xl whitespace-nowrap text-sm transition ${type === value ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/20' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}>{label}</button>)}</div>
     <section className="space-y-3">
       {isLoading && <div className="card p-10 text-center text-white/50">Loading notifications…</div>}

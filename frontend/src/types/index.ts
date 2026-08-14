@@ -1,11 +1,16 @@
 export interface User {
   _id: string;
   name: string;
+  username?: string;
   email: string;
   role: 'user' | 'admin' | 'restaurant' | 'delivery';
   phone?: string;
   address?: Address;
   avatar?: string;
+  bio?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLogin?: string;
   isVerified: boolean;
   favoriteItems: string[];
 }
@@ -50,6 +55,10 @@ export interface FoodItem {
   preparationTime: number;
   rating: number;
   reviewCount: number;
+  totalOrdersSold?: number;
+  isFeatured?: boolean;
+  featuredBy?: string;
+  featuredAt?: string;
   discount?: number;
   promotion?: { campaignId: string; label: string; description: string; discountType: 'percentage'|'fixed'; discountValue: number; startAt: string; endAt: string; originalPrice: number; discountedPrice: number; amountSaved: number; percentageSaved: number };
   tags: string[];
@@ -80,7 +89,36 @@ export interface Restaurant {
     newOrders: boolean; newReviews: boolean; orderCancellation: boolean;
     paymentReceived: boolean; deliveryUpdates: boolean; adminAnnouncements: boolean;
   };
+  paymentMethods?: PaymentMethods;
   isActive: boolean;
+}
+
+export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'cod';
+export type PaymentAccountType = 'Personal' | 'Agent';
+export interface PaymentMethods {
+  bkash: { enabled: boolean; phoneNumber: string; accountType: PaymentAccountType };
+  nagad: { enabled: boolean; phoneNumber: string; accountType: PaymentAccountType };
+  rocket: { enabled: boolean; phoneNumber: string; accountType: PaymentAccountType };
+  cod: { enabled: boolean };
+}
+
+export interface Payment {
+  _id: string;
+  orderId: Order | string;
+  restaurantId: Restaurant | string;
+  customerId: User | string;
+  method: PaymentMethod;
+  receiverNumber?: string;
+  receiverAccountType?: PaymentAccountType;
+  senderNumber?: string;
+  transactionId?: string;
+  amount: number;
+  status: 'pending' | 'submitted' | 'verified' | 'rejected';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CartItem {
@@ -111,6 +149,7 @@ export interface OrderItem {
 
 export interface Order {
   _id: string;
+  checkoutToken?: string;
   orderNumber: string;
   user: User | string;
   restaurant: Restaurant | string;
@@ -122,7 +161,8 @@ export interface Order {
   deliveryAddress: Address;
   paymentMethod: 'bkash' | 'nagad' | 'rocket' | 'cod';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  orderStatus: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  transactionId?: string;
+  orderStatus: 'payment_pending' | 'payment_failed' | 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
   couponCode?: string;
   specialInstructions?: string;
   estimatedDeliveryTime?: string;
@@ -131,6 +171,13 @@ export interface Order {
   deliveryPerson?: string;
   deliveryStatus?: 'accepted' | 'going_to_restaurant' | 'picked_up' | 'on_the_way' | 'delivered';
   deliveryEarning?: number;
+  deliveryPlatformShare?:number;
+  deliveryDistanceKm?:number;
+  deliveryCompletionMinutes?:number;
+  deliveryEarningMode?:'fixed'|'distance'|'percentage'|'hybrid';
+  deliveryEarningValue?:number;
+  deliveryEarningStatus?:'pending'|'processing'|'settled';
+  deliverySettlement?:string;
   deliveryManSnapshot?: { id: string; name: string };
   assignedAt?: string;
   pickupTime?: string;

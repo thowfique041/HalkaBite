@@ -376,7 +376,7 @@ const RestaurantDashboardPage: React.FC = () => {
                     ) : (
                         <div className="space-y-3">
                             {popularItems.map((item, index) => (
-                                <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                                <div key={item.foodItemId || item.name} className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <span className="text-2xl font-bold text-white/20">#{index + 1}</span>
                                         <div>

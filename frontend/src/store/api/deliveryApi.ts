@@ -23,6 +23,9 @@ export interface DeliveryDashboardData {
   availableCount: number;
   todayOrders: number;
   earnings: { today: number; weekly: number; monthly: number; bonus: number; incentives: number };
+  wallet:{currentBalance:number;pendingEarnings:number;paidEarnings:number;totalEarnings:number};
+  settlements:Array<{_id:string;settlementId:string;periodStart:string;periodEnd:string;totalDeliveries:number;totalEarnings:number;bonus:number;penalty:number;finalAmount:number;status:'pending'|'processing'|'paid'|'rejected'|'cancelled';paymentMethod?:string;referenceNumber?:string;paymentDate?:string;createdAt:string}>;
+  earningSetting:{mode:'fixed'|'distance'|'percentage'|'hybrid';fixedAmount:number;baseDistanceKm:number;baseAmount:number;extraPerKm:number;percentage:number};
   history: Order[];
   reviews: Array<{ _id: string; comment: string; rating: number }>;
 }

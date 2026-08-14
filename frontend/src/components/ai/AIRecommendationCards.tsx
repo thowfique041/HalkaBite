@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Clock, Eye, ShoppingBag, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { FoodItem } from '../../types';
 import { useAddToCartMutation } from '../../store/api/cartApi';
 import FoodModal from '../food/FoodModal';
+import { celebrateCartAddition, useAnimatedAddToCart } from '../../hooks/useAnimatedAddToCart';
 
 export interface AIRecommendedFood {
   foodId: string;
@@ -54,12 +55,13 @@ const toFoodItem = (food: AIRecommendedFood): FoodItem => ({
 
 export const AIRecommendedFoodCard: React.FC<{ food: AIRecommendedFood }> = ({ food }) => {
   const [showDetails, setShowDetails] = useState(false);
-  const [addToCart, { isLoading }] = useAddToCartMutation();
+  const { addToCart, isLoading, isAdded } = useAnimatedAddToCart({ name: food.foodName, image: food.image });
+  const addButtonRef = useRef<HTMLButtonElement>(null);
   const item = toFoodItem(food);
 
   const handleAdd = async () => {
     try {
-      await addToCart({ foodItemId: food.foodId, quantity: 1 }).unwrap();
+      await addToCart({ foodItemId: food.foodId, quantity: 1 }, addButtonRef.current);
       toast.success(`${food.foodName} added to cart`);
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to add item to cart');
@@ -94,8 +96,9 @@ export const AIRecommendedFoodCard: React.FC<{ food: AIRecommendedFood }> = ({ f
             <button onClick={() => setShowDetails(true)} className="btn btn-outline px-2 py-2 text-xs flex items-center justify-center gap-1">
               <Eye className="w-3.5 h-3.5" /> Details
             </button>
-            <button onClick={handleAdd} disabled={!food.availability || isLoading} className="btn btn-primary px-2 py-2 text-xs flex items-center justify-center gap-1 disabled:opacity-50">
-              <ShoppingBag className="w-3.5 h-3.5" /> {isLoading ? 'Adding' : 'Add'}
+            <button ref={addButtonRef} onClick={handleAdd} disabled={!food.availability || isLoading} className={`btn btn-primary relative px-2 py-2 text-xs flex items-center justify-center gap-1 disabled:opacity-50 ${isAdded ? 'add-to-cart-success' : ''}`}>
+              <ShoppingBag className="w-3.5 h-3.5" /> {isLoading ? 'Adding' : isAdded ? 'Added ✓' : 'Add'}
+              {isAdded && <span aria-hidden="true" className="add-to-cart-sparkles"><i /><i /><i /><i /><i /></span>}
             </button>
           </div>
         </div>
@@ -107,11 +110,16 @@ export const AIRecommendedFoodCard: React.FC<{ food: AIRecommendedFood }> = ({ f
 
 export const AIRecommendedComboCard: React.FC<{ combo: AIRecommendedCombo }> = ({ combo }) => {
   const [addToCart, { isLoading }] = useAddToCartMutation();
+  const [isAdded, setIsAdded] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const orderCombo = async () => {
     try {
       for (const item of combo.items) {
         await addToCart({ foodItemId: item.foodId, quantity: 1 }).unwrap();
       }
+      setIsAdded(true);
+      celebrateCartAddition(buttonRef.current, { name: combo.comboName, image: combo.items[0]?.image });
+      window.setTimeout(() => setIsAdded(false), 1200);
       toast.success(`${combo.comboName} added to cart`);
     } catch (error: any) {
       toast.error(error?.data?.message || 'Could not add the complete combo');
@@ -136,8 +144,9 @@ export const AIRecommendedComboCard: React.FC<{ combo: AIRecommendedCombo }> = (
         <span className="text-xl font-bold text-primary-400">৳{combo.totalPrice}</span>
         <span className="flex items-center gap-1 text-xs"><Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />{combo.rating.toFixed(1)}</span>
       </div>
-      <button onClick={orderCombo} disabled={isLoading} className="btn btn-primary w-full justify-center mt-3 py-2 text-sm disabled:opacity-50">
-        <ShoppingBag className="w-4 h-4 mr-1" /> {isLoading ? 'Adding Combo...' : 'Order This Combo'}
+      <button ref={buttonRef} onClick={orderCombo} disabled={isLoading} className={`btn btn-primary relative w-full justify-center mt-3 py-2 text-sm disabled:opacity-50 ${isAdded ? 'add-to-cart-success' : ''}`}>
+        <ShoppingBag className="w-4 h-4 mr-1" /> {isLoading ? 'Adding Combo...' : isAdded ? 'Added ✓' : 'Order This Combo'}
+        {isAdded && <span aria-hidden="true" className="add-to-cart-sparkles"><i /><i /><i /><i /><i /></span>}
       </button>
     </article>
   );

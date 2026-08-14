@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, CallbackWithoutResultAndOptionalError } fro
 
 export interface IOrderDocument extends Document {
   orderNumber: string;
+  checkoutToken?: string;
   user: mongoose.Types.ObjectId;
   restaurant: mongoose.Types.ObjectId;
   items: Array<{
@@ -33,7 +34,7 @@ export interface IOrderDocument extends Document {
   };
   paymentMethod: 'bkash' | 'nagad' | 'rocket' | 'cod';
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  orderStatus: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
+  orderStatus: 'payment_pending' | 'payment_failed' | 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'delivered' | 'cancelled';
   couponCode?: string;
   specialInstructions?: string;
   estimatedDeliveryTime?: Date;
@@ -41,6 +42,13 @@ export interface IOrderDocument extends Document {
   deliveryPerson?: mongoose.Types.ObjectId;
   deliveryStatus?: 'accepted' | 'going_to_restaurant' | 'picked_up' | 'on_the_way' | 'delivered';
   deliveryEarning?: number;
+  deliveryPlatformShare?: number;
+  deliveryDistanceKm?: number;
+  deliveryCompletionMinutes?: number;
+  deliveryEarningMode?: 'fixed'|'distance'|'percentage'|'hybrid';
+  deliveryEarningValue?: number;
+  deliveryEarningStatus?: 'pending'|'processing'|'settled';
+  deliverySettlement?: mongoose.Types.ObjectId;
   rejectedBy: mongoose.Types.ObjectId[];
   deliveryManSnapshot?: { id: string; name: string };
   assignedAt?: Date;
@@ -56,6 +64,11 @@ export interface IOrderDocument extends Document {
   }>;
   transactionId?: string;
   isCatering: boolean;
+  commissionMode?: 'percentage' | 'fixed' | 'none';
+  commissionValue?: number;
+  platformCommission?: number;
+  restaurantEarnings?: number;
+  commissionSetting?: mongoose.Types.ObjectId;
   cateringDetails?: {
     eventDate: Date;
     guestCount: number;
@@ -94,6 +107,11 @@ const addressSchema = new Schema({
 }, { _id: false });
 
 const orderSchema = new Schema<IOrderDocument>({
+  checkoutToken: {
+    type: String,
+    trim: true,
+    immutable: true
+  },
   orderNumber: {
     type: String,
     unique: true
@@ -145,7 +163,7 @@ const orderSchema = new Schema<IOrderDocument>({
   },
   orderStatus: {
     type: String,
-    enum: ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'],
+    enum: ['payment_pending', 'payment_failed', 'pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'],
     default: 'pending'
   },
   couponCode: String,
@@ -164,6 +182,13 @@ const orderSchema = new Schema<IOrderDocument>({
     type: Number,
     min: 0
   },
+  deliveryPlatformShare:{type:Number,immutable:true},
+  deliveryDistanceKm:{type:Number,min:0},
+  deliveryCompletionMinutes:{type:Number,min:0,immutable:true},
+  deliveryEarningMode:{type:String,enum:['fixed','distance','percentage','hybrid'],immutable:true},
+  deliveryEarningValue:{type:Number,min:0,immutable:true},
+  deliveryEarningStatus:{type:String,enum:['pending','processing','settled'],index:true},
+  deliverySettlement:{type:Schema.Types.ObjectId,ref:'DeliverySettlement',index:true},
   rejectedBy: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
@@ -191,6 +216,11 @@ const orderSchema = new Schema<IOrderDocument>({
     type: Boolean,
     default: false
   },
+  commissionMode: { type: String, enum: ['percentage', 'fixed', 'none'], immutable: true },
+  commissionValue: { type: Number, min: 0, immutable: true },
+  platformCommission: { type: Number, min: 0, immutable: true },
+  restaurantEarnings: { type: Number, min: 0, immutable: true },
+  commissionSetting: { type: Schema.Types.ObjectId, ref: 'CommissionSetting', immutable: true },
   cateringDetails: {
     eventDate: Date,
     guestCount: Number,
@@ -218,6 +248,14 @@ orderSchema.pre('save', async function() {
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ restaurant: 1, createdAt: -1 });
 orderSchema.index({ orderStatus: 1 });
+orderSchema.index({ paymentStatus: 1, paymentMethod: 1, createdAt: -1 });
+orderSchema.index({ totalAmount: 1, createdAt: -1 });
+orderSchema.index({ platformCommission: 1, commissionValue: 1 });
+orderSchema.index({ restaurant: 1, orderStatus: 1, createdAt: -1 });
 orderSchema.index({ deliveryPerson: 1, deliveryStatus: 1 });
+orderSchema.index(
+  { user: 1, checkoutToken: 1 },
+  { unique: true, partialFilterExpression: { checkoutToken: { $type: 'string' } } }
+);
 
 export const Order = mongoose.model<IOrderDocument>('Order', orderSchema);

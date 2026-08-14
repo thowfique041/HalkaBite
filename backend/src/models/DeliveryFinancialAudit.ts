@@ -1,0 +1,4 @@
+import mongoose,{Document,Schema}from'mongoose';
+export interface IDeliveryFinancialAuditDocument extends Document{deliveryMan:mongoose.Types.ObjectId;settlement?:mongoose.Types.ObjectId;action:string;amount:number;reason:string;admin:mongoose.Types.ObjectId;createdAt:Date;}
+const schema=new Schema<IDeliveryFinancialAuditDocument>({deliveryMan:{type:Schema.Types.ObjectId,ref:'User',required:true,index:true},settlement:{type:Schema.Types.ObjectId,ref:'DeliverySettlement'},action:{type:String,enum:['settlement_created','settlement_paid','settlement_cancelled','wallet_adjusted','bonus_added','penalty_added'],required:true},amount:{type:Number,required:true},reason:{type:String,required:true,trim:true,maxlength:1000},admin:{type:Schema.Types.ObjectId,ref:'User',required:true}},{timestamps:true});
+export const DeliveryFinancialAudit=mongoose.model<IDeliveryFinancialAuditDocument>('DeliveryFinancialAudit',schema);

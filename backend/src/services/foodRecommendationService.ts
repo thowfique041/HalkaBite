@@ -1,15 +1,14 @@
 import { Response } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PipelineStage, Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import { Category, FoodItem, Restaurant } from '../models';
 import { AIResponseLanguage, detectAIResponseLanguage, localizeDigits } from '../utils/aiLanguage';
 import type { IntentFilters } from './aiIntentAnalyzer';
+import { generateGeminiText, logAIError } from './geminiClient';
 
 const MAX_QUERY_LENGTH = 500;
 const CANDIDATE_LIMIT = 25;
 const RECOMMENDATION_LIMIT = 5;
-const GEMINI_TIMEOUT_MS = 12_000;
 
 type LocationInput = { lat: number; lng: number };
 
@@ -287,8 +286,6 @@ const buildGroundedResponse = (foods: FoodCandidate[], language: AIResponseLangu
 });
 
 const askGemini = async (query: string, foods: FoodCandidate[], language: AIResponseLanguage) => {
-  if (!process.env.GEMINI_API_KEY) return buildGroundedResponse(foods, language);
-
   const promptFoods = foods.map(({ distanceKm, ...food }) => ({ ...food, ...(distanceKm !== undefined ? { distanceKm } : {}) }));
   const prompt = `You are HalkaBite's grounded food recommendation ranker.
 
@@ -307,16 +304,24 @@ ${JSON.stringify(query)}
 AVAILABLE_FOODS:
 ${JSON.stringify(promptFoods)}`;
 
-  const recommendationModel = new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 1000 }
-  });
-  const generation = recommendationModel.generateContent(prompt);
-  const result = await Promise.race([
-    generation,
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini recommendation timed out')), GEMINI_TIMEOUT_MS))
-  ]);
-  const raw = result.response.text().trim().replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+  const raw = (await generateGeminiText(prompt, {
+    responseMimeType: 'application/json',
+    responseJsonSchema: {
+      type: 'object',
+      properties: {
+        recommendedFoods: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { foodId: { type: 'string' } },
+            required: ['foodId'], additionalProperties: false
+          }
+        }
+      },
+      required: ['recommendedFoods'], additionalProperties: false
+    },
+    thinkingConfig: { thinkingBudget: 0 }, temperature: 0.2, maxOutputTokens: 1000
+  })).replace(/^```json\s*/i, '').replace(/```$/, '').trim();
   const parsed = JSON.parse(raw) as { recommendedFoods?: ModelRecommendation[] };
   const byId = new Map(foods.map(food => [food.foodId, food]));
   const seen = new Set<string>();
@@ -426,7 +431,7 @@ export const getRecommendationsFromFilters = async (
   try {
     return await askGemini(query, foods, language);
   } catch (error) {
-    console.error('Gemini grounded response generation error:', error);
+    logAIError('grounded-recommendation', error, { candidateCount: foods.length });
     return buildGroundedResponse(foods, language);
   }
 };
@@ -465,7 +470,14 @@ export const handleFoodRecommendation = async (req: AuthRequest, res: Response) 
     const data = await getRecommendationsFromFilters(query, analysis.filters, language, location);
     return sendRecommendation(data);
   } catch (error: any) {
-    console.error('Food recommendation error:', error);
-    return res.status(500).json({ success: false, message: 'Unable to generate food recommendations right now.' });
+    logAIError('recommendation-request', error);
+    const status = typeof error?.statusCode === 'number' ? error.statusCode : 500;
+    return res.status(status).json({
+      success: false,
+      code: error?.code || 'RECOMMENDATION_FAILED',
+      message: process.env.NODE_ENV === 'development' && error instanceof Error
+        ? error.message
+        : 'Unable to generate food recommendations right now.'
+    });
   }
 };

@@ -6,7 +6,7 @@ const NotificationIcon: React.FC<{ type: NotificationType; className?: string }>
   const icons: Partial<Record<NotificationType, React.ElementType>> = {
     new_review: Star, rating_increased: Star, order_cancelled: XCircle,
     delivery_assigned: Truck, order_picked_up: Truck, order_delivered: PackageCheck,
-    payment_received: CircleDollarSign, admin_announcement: Megaphone, milestone: Star
+    payment_received: CircleDollarSign, payment_submitted: CircleDollarSign, admin_announcement: Megaphone, milestone: Star
   };
   const Icon = icons[type] || Bell;
   return <Icon className={className} />;

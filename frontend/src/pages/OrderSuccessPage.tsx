@@ -1,9 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, ArrowRight, Home } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 const OrderSuccessPage: React.FC = () => {
+  const location = useLocation();
+  const state = location.state as { orderNumber?: string; awaitingVerification?: boolean } | null;
+  const awaitingVerification = Boolean(state?.awaitingVerification);
   return (
     <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
       <div className="max-w-md w-full text-center">
@@ -21,14 +24,14 @@ const OrderSuccessPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <h1 className="text-3xl font-bold mb-2">Order Placed!</h1>
+          <h1 className="text-3xl font-bold mb-2">{awaitingVerification ? 'Payment Submitted' : 'Order Placed!'}</h1>
           <p className="text-white/60 mb-8">
-            Thank you for your order. We've received it and will begin processing it right away.
+            {awaitingVerification ? 'Your payment is waiting for restaurant verification. The order will be sent for processing after it is verified.' : "Thank you for your order. We've received it and will begin processing it right away."}
           </p>
 
           <div className="card p-6 mb-8 bg-dark-100/50">
             <div className="text-sm text-white/40 mb-1">Order ID</div>
-            <div className="text-xl font-mono font-bold text-primary-400">#ORD-7829</div>
+            <div className="text-xl font-mono font-bold text-primary-400">{state?.orderNumber ? `#${state.orderNumber}` : 'Created securely'}</div>
           </div>
 
           <div className="space-y-3">

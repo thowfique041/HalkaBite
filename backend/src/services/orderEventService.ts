@@ -3,7 +3,7 @@ import { EventEmitter } from 'events';
 export interface OrderLifecycleEvent {
   orderId: string;
   orderNumber?: string;
-  type: 'order_ready' | 'delivery_assigned' | 'delivery_status_changed' | 'delivery_presence_changed' | 'delivery_order_invalidated' | 'review_submitted';
+  type: 'order_ready' | 'order_status_changed' | 'delivery_assigned' | 'delivery_status_changed' | 'delivery_presence_changed' | 'delivery_order_invalidated' | 'review_submitted';
   status: string;
   occurredAt: string;
 }

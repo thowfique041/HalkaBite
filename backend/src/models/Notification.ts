@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export type NotificationType =
   | 'new_order' | 'new_review' | 'order_cancelled' | 'delivery_assigned'
-  | 'order_picked_up' | 'order_delivered' | 'payment_received'
+  | 'order_picked_up' | 'order_delivered' | 'payment_received' | 'payment_submitted'
   | 'rating_increased' | 'milestone' | 'admin_announcement' | 'identity_update';
 
 export interface INotificationDocument extends Document {
@@ -26,7 +26,7 @@ const notificationSchema = new Schema<INotificationDocument>({
     type: String,
     required: true,
     enum: ['new_order', 'new_review', 'order_cancelled', 'delivery_assigned', 'order_picked_up',
-      'order_delivered', 'payment_received', 'rating_increased', 'milestone', 'admin_announcement', 'identity_update']
+      'order_delivered', 'payment_received', 'payment_submitted', 'rating_increased', 'milestone', 'admin_announcement', 'identity_update']
   },
   orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
   reviewId: { type: Schema.Types.ObjectId, ref: 'Review' },

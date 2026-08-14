@@ -1,92 +1,50 @@
-import React from 'react';
-import { useGetAllOrdersQuery } from '../../store/api/orderApi';
-import { Eye } from 'lucide-react';
-import type { Order } from '../../types';
-import DeliveryAuditTrail from '../../components/orders/DeliveryAuditTrail';
+import React,{useEffect,useMemo,useState} from 'react';
+import { ChevronDown,ChevronUp,Download,FileSpreadsheet,Filter,Search,X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useSearchParams } from 'react-router-dom';
+import { useGetAdminRestaurantsQuery,useGetUsersQuery } from '../../store/api/adminApi';
+import { useGetAdminOrdersQuery,useLazyGetAdminOrdersQuery } from '../../store/api/orderApi';
+import type { AdminOrder,AdminOrderFilters } from '../../store/api/orderApi';
 
-const OrdersPage: React.FC = () => {
-    // Use the admin endpoint to get ALL orders
-    const { data: ordersData, isLoading } = useGetAllOrdersQuery(undefined, {
-        pollingInterval: 5000,
-        refetchOnFocus: true,
-        refetchOnReconnect: true,
-    });
-    const orders = ordersData?.data?.orders || [];
+const initial:AdminOrderFilters={status:'all',paymentStatus:'all',paymentMethod:'all',datePreset:'',sort:'createdAt_desc',page:1,limit:25};
+const money=(value=0)=>`৳${value.toLocaleString(undefined,{maximumFractionDigits:2})}`;
+const Field:React.FC<React.PropsWithChildren<{label:string}>>=({label,children})=><label className="block"><span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/40">{label}</span>{children}</label>;
+const selectClass='input w-full text-sm';
 
-    if (isLoading) {
-        return <div className="text-center py-8">Loading orders...</div>;
-    }
-
-    return (
-        <div>
-            <h1 className="text-3xl font-bold mb-8">Orders Management</h1>
-
-            <div className="card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-white/5">
-                            <tr>
-                                <th className="p-4">Order ID</th>
-                                <th className="p-4">Customer</th>
-                                <th className="p-4">Restaurant</th>
-                                <th className="p-4">Items</th>
-                                <th className="p-4">Total</th>
-                                <th className="p-4">Status</th>
-                                <th className="p-4">Delivery Partner</th>
-                                <th className="p-4">Date</th>
-                                <th className="p-4">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/10">
-                            {orders.map((order: Order) => (
-                                <tr key={order._id} className="hover:bg-white/5 transition-colors">
-                                    <td className="p-4 font-mono text-sm">{order.orderNumber}</td>
-                                    <td className="p-4">{(order.user as any)?.name}</td>
-                                    <td className="p-4">{(order.restaurant as any)?.name}</td>
-                                    <td className="p-4 text-sm text-white/60">
-                                        {order.items.map((i: any) => `${i.quantity}x ${i.name}`).join(', ')}
-                                    </td>
-                                    <td className="p-4 font-bold">৳{order.totalAmount}</td>
-                                    <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${order.orderStatus === 'delivered'
-                                            ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                            : order.orderStatus === 'pending'
-                                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                                                : 'bg-red-500/10 text-red-400 border-red-500/20'
-                                            }`}>
-                                            {(order.deliveryStatus || order.orderStatus).replaceAll('_', ' ').toUpperCase()}
-                                        </span>
-                                    </td>
-                                    <td className="p-4">
-                                        {order.deliveryManSnapshot ? (
-                                            <div>
-                                                <div className="font-medium">{order.deliveryManSnapshot.name}</div>
-                                                <div className="text-xs text-white/40 font-mono">{order.deliveryManSnapshot.id}</div>
-                                                <div className="text-xs text-white/50 mt-1">
-                                                    {order.assignedAt ? `Assigned ${new Date(order.assignedAt).toLocaleString()}` : ''}
-                                                </div>
-                                                <DeliveryAuditTrail order={order} compact />
-                                            </div>
-                                        ) : <span className="text-white/30">Unassigned</span>}
-                                    </td>
-                                    <td className="p-4 text-sm text-white/60">
-                                        {new Date(order.createdAt).toLocaleDateString()}
-                                    </td>
-                                    <td className="p-4">
-                                        <div className="flex items-center gap-2">
-                                            <button className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
-                                                <Eye className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
+const OrdersPage:React.FC=()=>{
+ const [searchParams,setSearchParams]=useSearchParams();
+ const [filters,setFilters]=useState<AdminOrderFilters>(()=>({
+  ...initial,
+  ...Object.fromEntries(['status','paymentStatus','paymentMethod','restaurant','customer','rider','datePreset','from','to','startTime','endTime','sort'].flatMap(key=>searchParams.get(key)?[[key,searchParams.get(key)]]:[])),
+  page:Number(searchParams.get('page'))||1,
+  limit:([10,25,50,100].includes(Number(searchParams.get('limit')))?Number(searchParams.get('limit')):25) as 10|25|50|100,
+  ...Object.fromEntries(['minAmount','maxAmount','commissionPercent','minCommission','maxCommission'].flatMap(key=>searchParams.get(key)!==null?[[key,Number(searchParams.get(key))]]:[]))
+ })),[searchText,setSearchText]=useState(searchParams.get('search')||''),[open,setOpen]=useState(true),[exporting,setExporting]=useState(false);
+ useEffect(()=>{const timer=setTimeout(()=>setFilters(current=>({...current,search:searchText.trim()||undefined,page:1})),350);return()=>clearTimeout(timer);},[searchText]);
+ useEffect(()=>{const next=new URLSearchParams();Object.entries(filters).forEach(([key,value])=>{if(value!==undefined&&value!==''&&value!=='all'&&key!=='export')next.set(key,String(value));});setSearchParams(next,{replace:true});},[filters,setSearchParams]);
+ const query=useMemo(()=>Object.fromEntries(Object.entries(filters).filter(([,value])=>value!==''&&value!==undefined)),[filters]);
+ const {data,isLoading,isFetching}=useGetAdminOrdersQuery(query);const [fetchExport]=useLazyGetAdminOrdersQuery();
+ const {data:restaurantData}=useGetAdminRestaurantsQuery({limit:100});const {data:userData}=useGetUsersQuery();
+ const customers=userData?.data?.filter(user=>user.role==='user')||[],riders=userData?.data?.filter(user=>user.role==='delivery')||[];
+ const orders=data?.data?.orders||[],summary=data?.data?.summary,pagination=data?.data?.pagination;
+ const set=<K extends keyof AdminOrderFilters>(key:K,value:AdminOrderFilters[K])=>setFilters(current=>{
+  const next={...current,[key]:value};
+  return key==='page'?next:{...next,page:1};
+ });
+ const clear=()=>{setFilters(initial);setSearchText('');};
+ const chips=Object.entries(filters).filter(([key,value])=>!['page','limit','sort'].includes(key)&&value!==undefined&&value!==''&&value!=='all').map(([key,value])=>({key:key as keyof AdminOrderFilters,label:`${key.replace(/([A-Z])/g,' $1')}: ${value}`}));
+ const exportRows=async()=>{setExporting(true);try{const response=await fetchExport({...query,page:1,export:'true'}).unwrap();return response.data?.orders||[];}catch(error:any){toast.error(error?.data?.message||'Export failed');return [];}finally{setExporting(false);}};
+ const columns=['Order ID','Restaurant','Restaurant ID','Customer','Customer ID','Amount','Commission','Status','Payment','Method','Created'];
+ const cells=(order:AdminOrder)=>[order.orderNumber,typeof order.restaurant==='object'?order.restaurant.name:'Unavailable',typeof order.restaurant==='object'?order.restaurant.restaurantId||order.restaurant._id:'',typeof order.user==='object'?order.user.name:'Unavailable',typeof order.user==='object'?order.user._id:'',order.totalAmount,order.effectiveCommission,order.orderStatus,order.paymentStatus,order.paymentMethod,new Date(order.createdAt).toLocaleString()];
+ const download=async(format:'csv'|'excel'|'pdf')=>{const rows=await exportRows();if(!rows.length)return;if(format==='pdf'){const win=window.open('','_blank');if(!win)return toast.error('Allow popups to export PDF');win.document.write(`<html><head><title>HalkaBite Orders</title><style>body{font-family:Arial;padding:24px}table{border-collapse:collapse;width:100%;font-size:11px}th,td{border:1px solid #ddd;padding:6px;text-align:left}h1{font-size:20px}</style></head><body><h1>Filtered Orders Report</h1><p>Generated ${new Date().toLocaleString()}</p><table><thead><tr>${columns.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${cells(row).map(x=>`<td>${String(x??'')}</td>`).join('')}</tr>`).join('')}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);win.document.close();return;}const separator=format==='excel'?'\t':',';const escape=(value:unknown)=>`"${String(value??'').replaceAll('"','""')}"`;const content=[columns,...rows.map(cells)].map(row=>row.map(escape).join(separator)).join('\n');const blob=new Blob([content],{type:format==='excel'?'application/vnd.ms-excel;charset=utf-8':'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),anchor=document.createElement('a');anchor.href=url;anchor.download=`halkabite-orders-${new Date().toISOString().slice(0,10)}.${format==='excel'?'xls':'csv'}`;anchor.click();URL.revokeObjectURL(url);};
+ const cards=[['Total Orders',summary?.totalOrders||0],['Pending',summary?.pendingOrders||0],['Delivered',summary?.deliveredOrders||0],['Cancelled',summary?.cancelledOrders||0],["Today's Revenue",money(summary?.todayRevenue)],['Platform Commission',money(summary?.platformCommission)],['Average Order Value',money(summary?.averageOrderValue)]];
+ return <div className="space-y-6"><header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between"><div><p className="text-sm font-semibold text-primary-300">Operations center</p><h1 className="mt-1 text-3xl font-black">Orders Management</h1><p className="mt-2 text-white/50">Search, analyze and export orders using server-side filters.</p></div><div className="flex flex-wrap gap-2"><button disabled={exporting} onClick={()=>download('csv')} className="btn btn-ghost"><Download className="mr-2 h-4 w-4"/>CSV</button><button disabled={exporting} onClick={()=>download('excel')} className="btn btn-ghost"><FileSpreadsheet className="mr-2 h-4 w-4"/>Excel</button><button disabled={exporting} onClick={()=>download('pdf')} className="btn btn-ghost"><Download className="mr-2 h-4 w-4"/>PDF</button></div></header>
+ <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">{cards.map(([label,value])=><div key={label} className="card p-4"><p className="text-xs text-white/45">{label}</p><b className="mt-2 block text-xl">{value}</b></div>)}</div>
+ <section className="card overflow-hidden"><button onClick={()=>setOpen(value=>!value)} className="flex w-full items-center justify-between p-5 text-left"><span className="flex items-center gap-2 font-bold"><Filter className="h-5 w-5 text-primary-400"/>Advanced Filters {chips.length>0&&<i className="rounded-full bg-primary-500 px-2 py-0.5 text-xs not-italic">{chips.length}</i>}</span>{open?<ChevronUp/>:<ChevronDown/>}</button>{open&&<div className="border-t border-white/5 p-5"><div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4"><Field label="Global Search"><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-white/35"/><input className="input w-full pl-10" value={searchText} onChange={e=>setSearchText(e.target.value)} placeholder="Order, food, customer, restaurant…"/></div></Field><Field label="Order Status"><select className={selectClass} value={filters.status} onChange={e=>set('status',e.target.value)}>{[['all','All'],['pending','Pending'],['accepted','Accepted'],['preparing','Preparing'],['out_for_delivery','Out for Delivery'],['delivered','Delivered'],['cancelled','Cancelled'],['refunded','Refunded']].map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></Field><Field label="Payment Status"><select className={selectClass} value={filters.paymentStatus} onChange={e=>set('paymentStatus',e.target.value)}>{['all','paid','unpaid','refunded','failed'].map(v=><option value={v} key={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></Field><Field label="Payment Method"><select className={selectClass} value={filters.paymentMethod} onChange={e=>set('paymentMethod',e.target.value)}><option value="all">All</option><option value="cash_on_delivery">Cash on Delivery</option><option value="card">Card</option><option value="mobile_banking">Mobile Banking</option><option value="wallet">Wallet</option></select></Field>
+ <Field label="Restaurant"><input list="admin-order-restaurants" className="input w-full" value={filters.restaurant||''} onChange={e=>set('restaurant',e.target.value||undefined)} placeholder="Name or Restaurant ID"/><datalist id="admin-order-restaurants">{restaurantData?.data?.restaurants.map(r=><option key={r._id} value={r._id}>{r.name} · {r.restaurantId||r._id}</option>)}</datalist></Field><Field label="Customer"><input list="admin-order-customers" className="input w-full" value={filters.customer||''} onChange={e=>set('customer',e.target.value||undefined)} placeholder="Name, ID, phone or email"/><datalist id="admin-order-customers">{customers.map(user=><option key={user._id} value={user._id}>{user.name} · {user.email}</option>)}</datalist></Field><Field label="Rider"><input list="admin-order-riders" className="input w-full" value={filters.rider||''} onChange={e=>set('rider',e.target.value||undefined)} placeholder="Name, ID, phone or email"/><datalist id="admin-order-riders">{riders.map(user=><option key={user._id} value={user._id}>{user.name} · {user.phone||user.email}</option>)}</datalist></Field><Field label="Date Range"><select className={selectClass} value={filters.datePreset||''} onChange={e=>set('datePreset',e.target.value||undefined)}><option value="">All time</option><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="last7">Last 7 Days</option><option value="last30">Last 30 Days</option><option value="thisMonth">This Month</option><option value="previousMonth">Previous Month</option><option value="thisYear">This Year</option></select></Field>
+ <Field label="Start Date"><input type="date" className="input w-full" value={filters.from||''} onChange={e=>set('from',e.target.value||undefined)}/></Field><Field label="End Date"><input type="date" className="input w-full" value={filters.to||''} onChange={e=>set('to',e.target.value||undefined)}/></Field><Field label="Start Time"><input type="time" className="input w-full" value={filters.startTime||''} onChange={e=>set('startTime',e.target.value||undefined)}/></Field><Field label="End Time"><input type="time" className="input w-full" value={filters.endTime||''} onChange={e=>set('endTime',e.target.value||undefined)}/></Field>
+ <Field label="Minimum Amount"><input type="number" min="0" className="input w-full" value={filters.minAmount??''} onChange={e=>set('minAmount',e.target.value===''?undefined:Number(e.target.value))}/></Field><Field label="Maximum Amount"><input type="number" min="0" className="input w-full" value={filters.maxAmount??''} onChange={e=>set('maxAmount',e.target.value===''?undefined:Number(e.target.value))}/></Field><Field label="Commission %"><input type="number" min="0" max="100" className="input w-full" value={filters.commissionPercent??''} onChange={e=>set('commissionPercent',e.target.value===''?undefined:Number(e.target.value))}/></Field><Field label="Commission Amount"><div className="grid grid-cols-2 gap-2"><input type="number" min="0" className="input w-full" placeholder="Min" value={filters.minCommission??''} onChange={e=>set('minCommission',e.target.value===''?undefined:Number(e.target.value))}/><input type="number" min="0" className="input w-full" placeholder="Max" value={filters.maxCommission??''} onChange={e=>set('maxCommission',e.target.value===''?undefined:Number(e.target.value))}/></div></Field></div><div className="flex flex-wrap items-center gap-2">{chips.map(chip=><button key={chip.key} onClick={()=>{set(chip.key,undefined);if(chip.key==='search')setSearchText('');}} className="rounded-full bg-primary-500/10 px-3 py-1.5 text-xs text-primary-300">{chip.label}<X className="ml-1 inline h-3 w-3"/></button>)}{chips.length>0&&<button onClick={clear} className="text-sm text-red-300 hover:underline">Clear All Filters</button>}</div></div>}</section>
+ <section className="card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 p-4"><p className="text-sm text-white/45">{pagination?.total||0} matching orders {isFetching&&!isLoading&&'· Updating…'}</p><select className="input w-auto" value={filters.sort} onChange={e=>set('sort',e.target.value)}>{[['createdAt_desc','Newest'],['createdAt_asc','Oldest'],['amount_desc','Highest Amount'],['amount_asc','Lowest Amount'],['commission_desc','Highest Commission'],['commission_asc','Lowest Commission'],['deliveryTime_desc','Delivery Time'],['preparationTime_desc','Preparation Time']].map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></div><div className="max-h-[680px] overflow-auto"><table className="w-full min-w-[1250px] text-left text-sm"><thead className="sticky top-0 z-10 bg-dark-200 text-xs uppercase tracking-wide text-white/40"><tr>{['Order','Customer','Restaurant','Foods','Amount','Commission','Payment','Status','Rider','Timing'].map(label=><th className="px-4 py-4" key={label}>{label}</th>)}</tr></thead><tbody>{isLoading?Array.from({length:8}).map((_,i)=><tr key={i} className="border-t border-white/5">{Array.from({length:10}).map((_,j)=><td key={j} className="p-4"><div className="h-5 animate-pulse rounded bg-white/5"/></td>)}</tr>):orders.map(order=><tr key={order._id} className="border-t border-white/5 transition hover:bg-white/[.025]"><td className="px-4 py-4"><b className="font-mono">{order.orderNumber}</b><small className="mt-1 block text-white/35">{order.transactionId||'No transaction ID'}</small></td><td className="px-4 py-4"><b>{typeof order.user==='object'?order.user.name:'Unavailable'}</b><small className="block text-white/35">{typeof order.user==='object'?order.user.email:''}</small></td><td className="px-4 py-4"><b>{typeof order.restaurant==='object'?order.restaurant.name:'Unavailable'}</b><small className="block font-mono text-white/35">{typeof order.restaurant==='object'?order.restaurant.restaurantId||order.restaurant._id:''}</small></td><td className="max-w-64 px-4 py-4 text-white/55">{order.items.map(item=>`${item.quantity}× ${item.foodName||item.name}`).join(', ')}</td><td className="px-4 py-4 font-bold">{money(order.totalAmount)}</td><td className="px-4 py-4"><b>{money(order.effectiveCommission)}</b>{order.commissionPercent!=null&&<small className="block text-white/35">{order.commissionPercent}%</small>}</td><td className="px-4 py-4"><span className="capitalize">{order.paymentStatus}</span><small className="block uppercase text-white/35">{order.paymentMethod}</small></td><td className="px-4 py-4"><span className={`rounded-full px-2.5 py-1 text-xs capitalize ${order.orderStatus==='delivered'?'bg-green-500/10 text-green-300':order.orderStatus==='cancelled'?'bg-red-500/10 text-red-300':'bg-yellow-500/10 text-yellow-300'}`}>{order.orderStatus.replaceAll('_',' ')}</span></td><td className="px-4 py-4">{order.deliveryManSnapshot?.name||'Unassigned'}</td><td className="px-4 py-4"><span>{new Date(order.createdAt).toLocaleString()}</span><small className="block text-white/35">Prep {order.preparationMinutes?.toFixed(0)||'—'}m · Delivery {order.deliveryMinutes?.toFixed(0)||'—'}m</small></td></tr>)}</tbody></table>{!isLoading&&!orders.length&&<div className="grid place-items-center px-6 py-20 text-center"><span className="text-5xl">📦</span><h3 className="mt-4 text-xl font-bold">No matching orders</h3><p className="mt-2 text-white/45">Try removing one or more filters.</p><button onClick={clear} className="btn btn-primary mt-5">Clear All Filters</button></div>}</div>{pagination&&pagination.pages>0&&<div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/5 p-4"><select className="input w-auto" value={filters.limit} onChange={e=>set('limit',Number(e.target.value) as 10|25|50|100)}>{[10,25,50,100].map(value=><option value={value} key={value}>{value} per page</option>)}</select><div className="flex items-center gap-3"><button disabled={pagination.page<=1} onClick={()=>set('page',pagination.page-1)} className="btn btn-ghost disabled:opacity-30">Previous</button><span className="text-sm">Page {pagination.page} of {Math.max(1,pagination.pages)}</span><button disabled={pagination.page>=pagination.pages} onClick={()=>set('page',pagination.page+1)} className="btn btn-ghost disabled:opacity-30">Next</button></div></div>}</section>
+ </div>;
 };
-
 export default OrdersPage;

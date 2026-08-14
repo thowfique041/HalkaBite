@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Order } from '../models';
 import { getLanguageInstruction } from '../utils/aiLanguage';
 import { analyzeCustomerIntent } from './aiIntentAnalyzer';
 import { getRecommendationsFromFilters } from './foodRecommendationService';
+import { generateGeminiText } from './geminiClient';
 
 type LocationInput = { lat: number; lng: number };
 
@@ -12,11 +12,6 @@ const generateStageTwoResponse = async (
   intent: string,
   retrievedData: unknown
 ) => {
-  const fallback = languageInstruction.includes('Bangla script')
-    ? 'দুঃখিত, এই মুহূর্তে উত্তরটি তৈরি করা যাচ্ছে না। অনুগ্রহ করে আবার চেষ্টা করুন।'
-    : 'Sorry, I could not generate a response right now. Please try again.';
-  if (!process.env.GEMINI_API_KEY) return fallback;
-
   const prompt = `You are Stage 2 of HalkaBite's retrieval-augmented chatbot pipeline.
 Generate a concise, friendly response using ONLY RETRIEVED_DATA.
 Never invent foods, restaurants, prices, ratings, orders, delivery states, policies, or account details.
@@ -28,17 +23,7 @@ INTENT: ${intent}
 USER_MESSAGE: ${JSON.stringify(message)}
 RETRIEVED_DATA: ${JSON.stringify(retrievedData)}`;
 
-  try {
-    const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      generationConfig: { temperature: 0.2, maxOutputTokens: 700 }
-    });
-    const result = await model.generateContent(prompt);
-    return result.response.text().trim() || fallback;
-  } catch (error) {
-    console.error('Gemini Stage 2 response error:', error);
-    return fallback;
-  }
+  return generateGeminiText(prompt, { temperature: 0.2, maxOutputTokens: 700 });
 };
 
 export const processCustomerMessage = async (

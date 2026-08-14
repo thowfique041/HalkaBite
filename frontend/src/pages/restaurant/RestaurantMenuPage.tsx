@@ -161,6 +161,7 @@ const RestaurantMenuPage: React.FC = () => {
                                             </span>
                                         </div>
                                     )}
+                                    {item.isFeatured && <div className="mb-2"><span className="inline-flex items-center gap-1 rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-2 py-1 text-xs font-bold text-yellow-300"><Star className="h-3.5 w-3.5 fill-current" />Featured Food</span></div>}
 
                                     <p className="text-sm text-white/60 mb-2 line-clamp-2">{item.description}</p>
                                     <div className="grid grid-cols-2 gap-2 mb-3">

@@ -79,9 +79,16 @@ const ChatWidget: React.FC = () => {
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
+      if (import.meta.env.DEV) console.error('AI chat request failed:', error);
+      const backendMessage = axios.isAxiosError(error) && typeof error.response?.data?.message === 'string'
+        ? error.response.data.message
+        : undefined;
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Sorry, I'm having trouble connecting. Please try again later.",
+        text: import.meta.env.DEV && backendMessage
+          ? `AI request failed${status ? ` (${status})` : ''}: ${backendMessage}`
+          : backendMessage || "Sorry, I'm having trouble connecting. Please try again later.",
         isBot: true,
         timestamp: new Date(),
       };

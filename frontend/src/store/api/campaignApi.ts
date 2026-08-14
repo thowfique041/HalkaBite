@@ -8,7 +8,6 @@ export const campaignApi=apiSlice.injectEndpoints({endpoints:b=>({
  getCampaignCustomers:b.query<ApiResponse<CampaignCustomer[]>,string>({query:search=>({url:'/campaigns/customers',params:{search}})}),
  getAllCampaignsAdmin:b.query<ApiResponse<any>,void>({query:()=>'/campaigns/admin/all'}),
  getCustomerCampaignNotifications:b.query<ApiResponse<any>,void>({query:()=>'/campaigns/customer-notifications'}),
- readCustomerCampaignNotifications:b.mutation<ApiResponse,void>({query:()=>({url:'/campaigns/customer-notifications/read-all',method:'PATCH'})}),
  trackCampaignClick:b.mutation<ApiResponse,string>({query:id=>({url:`/campaigns/${id}/click`,method:'POST'})})
 })});
-export const {useGetCampaignsQuery,useCreateCampaignMutation,useCancelCampaignMutation,useGetCampaignCustomersQuery,useGetAllCampaignsAdminQuery,useGetCustomerCampaignNotificationsQuery,useReadCustomerCampaignNotificationsMutation,useTrackCampaignClickMutation}=campaignApi;
+export const {useGetCampaignsQuery,useCreateCampaignMutation,useCancelCampaignMutation,useGetCampaignCustomersQuery,useGetAllCampaignsAdminQuery,useGetCustomerCampaignNotificationsQuery,useTrackCampaignClickMutation}=campaignApi;

@@ -1,120 +1,10 @@
 import { Request, Response } from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { FoodItem, Restaurant, Order } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import dotenv from 'dotenv';
-import { detectAIResponseLanguage, getLanguageInstruction } from '../utils/aiLanguage';
 import { processCustomerMessage } from './aiPipelineService';
+import { AIServiceError, generateGeminiText, logAIError } from './geminiClient';
 
 dotenv.config();
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-// Process voice command with Gemini AI
-const processVoiceCommand = async (transcript: string, userId: string) => {
-  try {
-    const responseLanguage = detectAIResponseLanguage(transcript);
-    const prompt = `You are an AI assistant for HalkaBite, a food delivery platform. 
-    User said: "${transcript}"
-
-    Language requirement: ${getLanguageInstruction(responseLanguage)}
-    
-    Analyze this voice command and determine the intent. Respond in JSON format with:
-    {
-      "intent": "order" | "status" | "recommend" | "help" | "navigate" | "unknown",
-      "message": "your response to the user",
-      "action": {
-        "type": "NAVIGATE" | "NONE",
-        "payload": "route path or null"
-      }
-    }
-    
-    For navigation:
-    - "menu" -> "/menu"
-    - "orders" -> "/orders"
-    - "profile" -> "/profile"
-    - "home" -> "/"
-    - "cart" -> "/cart"
-    
-    Keep responses friendly and concise.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text();
-    text = text.trim();
-    if (text.startsWith('```json')) {
-      text = text.substring(7);
-    }
-    if (text.endsWith('```')) {
-      text = text.substring(0, text.length - 3);
-    }
-    text = text.trim();
-
-    // Parse JSON response
-    const aiResponse = JSON.parse(text);
-
-    // Enhance response based on intent
-    if (aiResponse.intent === 'navigate') {
-      return aiResponse;
-    }
-
-    if (aiResponse.intent === 'order') {
-      const lowerTranscript = transcript.toLowerCase();
-      const foodItems = await FoodItem.find({ isAvailable: true, isDeleted: { $ne: true } });
-      const matchedItems = foodItems.filter(item =>
-        lowerTranscript.includes(item.name.toLowerCase())
-      );
-
-      return {
-        ...aiResponse,
-        items: matchedItems.map(item => ({
-          id: item._id,
-          name: item.name,
-          price: item.price
-        }))
-      };
-    }
-
-    if (aiResponse.intent === 'status') {
-      const latestOrder = await Order.findOne({ user: userId })
-        .sort({ createdAt: -1 });
-
-      if (latestOrder) {
-      return {
-        ...aiResponse,
-        order: latestOrder,
-        message: responseLanguage === 'bn'
-          ? `আপনার সর্বশেষ অর্ডার (${latestOrder.orderNumber}) এখন ${latestOrder.orderStatus} অবস্থায় আছে।`
-          : `Your latest order (${latestOrder.orderNumber}) is ${latestOrder.orderStatus}.`
-        };
-      }
-    }
-
-    if (aiResponse.intent === 'recommend') {
-      const popularItems = await FoodItem.find({ isAvailable: true, isDeleted: { $ne: true } })
-        .sort({ rating: -1, reviewCount: -1 })
-        .limit(5);
-
-      return {
-        ...aiResponse,
-        items: popularItems
-      };
-    }
-
-    return aiResponse;
-  } catch (error) {
-    console.error('Gemini AI error:', error);
-    // Fallback to basic response
-    return {
-      intent: 'unknown',
-      message: detectAIResponseLanguage(transcript) === 'bn'
-        ? 'এই মুহূর্তে আপনার অনুরোধটি বুঝতে সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করবেন?'
-        : "I'm having trouble processing that right now. Could you please try again?",
-      action: null
-    };
-  }
-};
 
 // @desc    Process voice command
 // @route   POST /api/ai/voice
@@ -144,9 +34,12 @@ export const handleVoiceCommand = async (req: AuthRequest, res: Response) => {
       data: result
     });
   } catch (error: any) {
-    res.status(500).json({
+    logAIError('voice-request', error);
+    const status = error instanceof AIServiceError ? error.statusCode : 500;
+    res.status(status).json({
       success: false,
-      message: error.message || 'Voice processing failed'
+      code: error?.code || 'VOICE_PROCESSING_FAILED',
+      message: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : 'Voice processing failed'
     });
   }
 };
@@ -158,7 +51,7 @@ export const handleChat = async (req: Request, res: Response) => {
   try {
     const { message, sessionId } = req.body;
 
-    if (!message) {
+    if (typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({
         success: false,
         message: 'No message provided'
@@ -173,7 +66,10 @@ export const handleChat = async (req: Request, res: Response) => {
       && Number(rawLocation.lng) >= -180 && Number(rawLocation.lng) <= 180
       ? { lat: Number(rawLocation.lat), lng: Number(rawLocation.lng) }
       : undefined;
-    const pipelineResult = await processCustomerMessage(message, (req as AuthRequest).user?._id?.toString(), location);
+    if (message.length > 2_000) {
+      return res.status(400).json({ success: false, code: 'MESSAGE_TOO_LONG', message: 'Message cannot exceed 2000 characters.' });
+    }
+    const pipelineResult = await processCustomerMessage(message.trim(), (req as AuthRequest).user?._id?.toString(), location);
 
     res.status(200).json({
       success: true,
@@ -186,17 +82,20 @@ export const handleChat = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
-    console.error('Gemini AI chat error:', error);
-    const responseLanguage = detectAIResponseLanguage(typeof req.body?.message === 'string' ? req.body.message : '');
-    // Fallback response
-    res.status(200).json({
-      success: true,
-      data: {
-        message: responseLanguage === 'bn'
-          ? 'আমি HalkaBite-এর এআই সহকারী। মেনু, ডেলিভারির সময়, পেমেন্ট এবং অন্যান্য বিষয়ে সাহায্য করতে পারি। কীভাবে সাহায্য করব?'
-          : "I'm HalkaBite's AI assistant! I can help with menu information, delivery times, payment options, and more. How can I assist you today?",
-        sessionId: req.body.sessionId || Date.now().toString()
-      }
+    logAIError('chat-request', error, {
+      messageLength: typeof req.body?.message === 'string' ? req.body.message.length : 0
+    });
+    const serviceError = error instanceof AIServiceError ? error : null;
+    const status = serviceError?.statusCode || 500;
+    const developmentMessage = serviceError?.message || (error instanceof Error ? error.message : 'Unknown AI error');
+    return res.status(status).json({
+      success: false,
+      code: serviceError?.code || 'AI_CHAT_FAILED',
+      message: process.env.NODE_ENV === 'development'
+        ? developmentMessage
+        : status === 504
+          ? 'The AI service took too long to respond. Please try again.'
+          : 'The AI service is temporarily unavailable. Please try again later.'
     });
   }
 };
@@ -206,7 +105,7 @@ export const handleChat = async (req: Request, res: Response) => {
 // @access  Public
 export const getCateringQuote = async (req: Request, res: Response) => {
   try {
-    const { guestCount, eventType, items, eventDate } = req.body;
+    const { guestCount, eventType, eventDate } = req.body;
 
     if (!guestCount || !eventType) {
       return res.status(400).json({
@@ -230,9 +129,7 @@ export const getCateringQuote = async (req: Request, res: Response) => {
     
     Base prices: Wedding: 1500 BDT, Corporate: 800 BDT, Birthday: 600 BDT, Other: 500 BDT per person.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const text = await generateGeminiText(prompt, { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 500 });
 
     try {
       const quoteData = JSON.parse(text);
@@ -271,9 +168,12 @@ export const getCateringQuote = async (req: Request, res: Response) => {
       });
     }
   } catch (error: any) {
-    res.status(500).json({
+    logAIError('catering-quote', error);
+    const status = error instanceof AIServiceError ? error.statusCode : 500;
+    res.status(status).json({
       success: false,
-      message: error.message || 'Quote generation failed'
+      code: error?.code || 'QUOTE_GENERATION_FAILED',
+      message: process.env.NODE_ENV === 'development' && error instanceof Error ? error.message : 'Quote generation failed'
     });
   }
 };

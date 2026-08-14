@@ -1,0 +1,4 @@
+import mongoose,{Document,Schema}from'mongoose';
+export interface IDeliveryTransactionDocument extends Document{deliveryMan:mongoose.Types.ObjectId;settlement?:mongoose.Types.ObjectId;type:'earning'|'payment'|'bonus'|'penalty';amount:number;balanceAfter:number;reference?:string;createdBy?:mongoose.Types.ObjectId;createdAt:Date;}
+const schema=new Schema<IDeliveryTransactionDocument>({deliveryMan:{type:Schema.Types.ObjectId,ref:'User',required:true,index:true},settlement:{type:Schema.Types.ObjectId,ref:'DeliverySettlement'},type:{type:String,enum:['earning','payment','bonus','penalty'],required:true},amount:{type:Number,required:true},balanceAfter:{type:Number,min:0,required:true},reference:String,createdBy:{type:Schema.Types.ObjectId,ref:'User'}},{timestamps:true});
+schema.index({deliveryMan:1,createdAt:-1});export const DeliveryTransaction=mongoose.model<IDeliveryTransactionDocument>('DeliveryTransaction',schema);

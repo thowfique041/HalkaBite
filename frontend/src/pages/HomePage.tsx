@@ -5,11 +5,11 @@ import {
   Mic, 
   Sparkles, 
   Clock, 
-  Shield, 
-  Truck,
+  Shield,
   MessageCircle,
   Star
 } from 'lucide-react';
+import TopRatedFoodHero from '../components/food/TopRatedFoodHero';
 
 const HomePage: React.FC = () => {
   const categories = [
@@ -98,41 +98,9 @@ const HomePage: React.FC = () => {
               </div>
             </div>
             
-            {/* Image */}
-            <div className="relative hidden lg:block">
-              <div className="relative w-96 h-96 mx-auto">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 blur-3xl opacity-30" />
-                <img
-                  src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500"
-                  alt="Burger"
-                  className="relative w-full h-full object-cover rounded-full animate-float"
-                />
-              </div>
-              
-              {/* Floating Cards */}
-              <div className="absolute top-10 -left-10 card p-4 animate-float" style={{ animationDelay: '0.5s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                    <Truck className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Fast Delivery</div>
-                    <div className="text-xs text-white/60">30-45 min</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute bottom-10 -right-10 card p-4 animate-float" style={{ animationDelay: '1s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
-                    <Star className="w-5 h-5 text-yellow-400" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Top Rated</div>
-                    <div className="text-xs text-white/60">4.8 Stars</div>
-                  </div>
-                </div>
-              </div>
+            {/* Live database-ranked featured food */}
+            <div className="relative lg:pl-4">
+              <TopRatedFoodHero />
             </div>
           </div>
         </div>
@@ -153,7 +121,8 @@ const HomePage: React.FC = () => {
               <Link
                 key={category.name}
                 to={`/menu?category=${category.name.toLowerCase()}`}
-                className="card p-6 text-center hover:scale-105 transition-transform group"
+                aria-label={`Browse ${category.name} foods`}
+                className="card group cursor-pointer border border-transparent p-6 text-center transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:border-primary-400/70 hover:shadow-xl hover:shadow-primary-500/20 focus-visible:-translate-y-1 focus-visible:border-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
               >
                 <div className={`w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-r ${category.color} flex items-center justify-center text-3xl group-hover:scale-110 transition-transform`}>
                   {category.emoji}
@@ -176,8 +145,8 @@ const HomePage: React.FC = () => {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature, index) => (
-              <div key={index} className="card p-6 card-hover">
+            {features.map((feature) => (
+              <div key={feature.title} className="card p-6 card-hover">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center mb-4">
                   {feature.icon}
                 </div>

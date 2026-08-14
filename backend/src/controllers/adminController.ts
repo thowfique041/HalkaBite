@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { DeliveryProfile, Order, Restaurant, User } from '../models';
+import { DeliveryProfile, DeliveryWallet, Order, Restaurant, User } from '../models';
 
 export const getDashboardOverview = async (_req: Request, res: Response) => {
   try {
@@ -130,6 +130,8 @@ export const getDeliveryManagement = async (req: Request, res: Response) => {
     const allDeliveryMen = await buildDeliveryManagement();
     const totalDeliveries = allDeliveryMen.reduce((sum, man) => sum + man.completedDeliveries, 0);
     const totalDeliveryEarnings = allDeliveryMen.reduce((sum, man) => sum + man.totalEarnings, 0);
+    const [chargeRows,walletRows]=await Promise.all([Order.aggregate([{$match:{orderStatus:'delivered',deliveryPerson:{$exists:true}}},{$group:{_id:null,charges:{$sum:'$deliveryFee'}}}]),DeliveryWallet.aggregate([{$group:{_id:null,paid:{$sum:'$paidEarnings'},pending:{$sum:'$pendingEarnings'}}}])]);
+    const deliveryChargesCollected=chargeRows[0]?.charges||0,totalPaidToDeliveryMen=walletRows[0]?.paid||0,pendingDeliveryPayments=walletRows[0]?.pending||0;
     const summary = {
       totalDeliveryMen: allDeliveryMen.length,
       activeDeliveryMen: allDeliveryMen.filter(man => man.isOnline).length,
@@ -138,6 +140,10 @@ export const getDeliveryManagement = async (req: Request, res: Response) => {
       availableDeliveryMen: allDeliveryMen.filter(man => man.status === 'online').length,
       totalDeliveries,
       totalDeliveryEarnings,
+      deliveryChargesCollected,
+      totalPaidToDeliveryMen,
+      pendingDeliveryPayments,
+      platformDeliveryMargin: deliveryChargesCollected-totalDeliveryEarnings,
       averageDeliveriesPerDeliveryMan: allDeliveryMen.length ? totalDeliveries / allDeliveryMen.length : 0,
       topPerformers: [...allDeliveryMen].sort((a, b) => b.completedDeliveries - a.completedDeliveries || b.rating - a.rating).slice(0, 5),
       recentlyActive: [...allDeliveryMen].filter(man => man.lastActiveAt).sort((a, b) => new Date(b.lastActiveAt!).getTime() - new Date(a.lastActiveAt!).getTime()).slice(0, 5)

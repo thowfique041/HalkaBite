@@ -1,8 +1,10 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { DeliveryProfile, Order } from '../models';
+import { DeliveryProfile, DeliverySettlement, DeliveryWallet, Order } from '../models';
 import { publishOrderEvent } from '../services/orderEventService';
 import { createRestaurantNotification } from '../services/notificationService';
+import { createCustomerOrderNotification } from '../services/customerOrderNotificationService';
+import { finalizeDeliveryEarning, getDeliveryEarningSetting } from '../services/deliveryFinanceService';
 
 const populatedOrder = () => [
   { path: 'restaurant', select: 'name phone address image isActive isOpen' },
@@ -32,6 +34,7 @@ const invalidReason = (order: any) => {
   if (order.restaurant.isOpen === false) return 'restaurant_unavailable' as const;
   return null;
 };
+const deliveryDistanceKm=(order:any)=>{const a=order.restaurant?.address?.coordinates,b=order.deliveryAddress?.coordinates;if(!Number.isFinite(a?.lat)||!Number.isFinite(a?.lng)||!Number.isFinite(b?.lat)||!Number.isFinite(b?.lng))return 0;const rad=(value:number)=>value*Math.PI/180,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng),x=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return Math.round(6371*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))*100)/100};
 
 const invalidateDeliveryOrders = async (orders: any[]) => {
   const invalidOrders = orders
@@ -89,7 +92,7 @@ export const getDeliveryDashboard = async (req: AuthRequest, res: Response) => {
     const week = new Date(today); week.setDate(week.getDate() - 6);
     const month = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    const [activeCandidate, availableOrders, earnings, historyCandidates] = await Promise.all([
+    const [activeCandidate, availableOrders, earnings, historyCandidates, wallet, settlements, earningSetting] = await Promise.all([
       Order.findOne({ deliveryPerson: userId, orderStatus: 'out_for_delivery' }).populate(populatedOrder()),
       getValidAvailableOrders(userId),
       Order.aggregate([
@@ -102,7 +105,10 @@ export const getDeliveryDashboard = async (req: AuthRequest, res: Response) => {
         } }
       ]),
       Order.find({ deliveryPerson: userId, orderStatus: { $in: ['delivered', 'cancelled'] } })
-        .populate(populatedOrder()).sort({ updatedAt: -1 }).limit(20)
+        .populate(populatedOrder()).sort({ updatedAt: -1 }).limit(20),
+      DeliveryWallet.findOneAndUpdate({deliveryMan:userId},{$setOnInsert:{deliveryMan:userId}},{upsert:true,new:true,setDefaultsOnInsert:true}),
+      DeliverySettlement.find({deliveryMan:userId}).select('settlementId periodStart periodEnd totalDeliveries totalEarnings bonus penalty finalAmount status paymentMethod referenceNumber paymentDate createdAt').sort({createdAt:-1}).limit(20).lean(),
+      getDeliveryEarningSetting()
     ]);
 
     let activeOrder = activeCandidate;
@@ -119,6 +125,9 @@ export const getDeliveryDashboard = async (req: AuthRequest, res: Response) => {
       availableCount: availableOrders.length,
       todayOrders: history.filter((order: any) => order.actualDeliveryTime && order.actualDeliveryTime >= today).length,
       earnings: { ...income, bonus: profile.bonus, incentives: profile.incentives },
+      wallet,
+      settlements,
+      earningSetting,
       history,
       reviews: []
     } });
@@ -180,7 +189,6 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
           deliveryPerson: req.user._id,
           deliveryStatus: 'accepted',
           orderStatus: 'out_for_delivery',
-          deliveryEarning: 50,
           deliveryManSnapshot: { id: req.user._id.toString(), name: req.user.name },
           assignedAt: new Date()
         },
@@ -263,8 +271,10 @@ export const updateDeliveryStatus = async (req: AuthRequest, res: Response) => {
       { new: true }
     ).populate(populatedOrder());
     if (!order) return res.status(404).json({ success: false, message: 'Active order not found' });
+    if(req.body.status==='delivered')await finalizeDeliveryEarning(order._id,Number(req.body.distanceKm)||deliveryDistanceKm(activeCandidate));
     await DeliveryProfile.findOneAndUpdate({ user: req.user._id }, { lastActiveAt: now });
     publishOrderEvent({ orderId: order._id.toString(), orderNumber: order.orderNumber, type: 'delivery_status_changed', status: req.body.status, occurredAt: now.toISOString() });
+    if (['picked_up', 'on_the_way', 'delivered'].includes(req.body.status)) await createCustomerOrderNotification(order, req.body.status);
     if (req.body.status === 'picked_up' || req.body.status === 'delivered') {
       await createRestaurantNotification({
         restaurantId: (order.restaurant as any)._id.toString(),

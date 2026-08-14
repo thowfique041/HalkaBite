@@ -1,24 +1,25 @@
-import React, { useState } from 'react';
-import { Search, Filter, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Search, Filter, X, Utensils } from 'lucide-react';
 import { useGetFoodItemsQuery } from '../store/api/foodApi';
 import FoodCard from '../components/food/FoodCard';
 import { useSearchParams } from 'react-router-dom';
 
 const MenuPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedCategory = searchParams.get('category')?.trim().toLowerCase() || '';
+  const selectedRestaurant = searchParams.get('restaurant') || '';
   const [filters, setFilters] = useState({
     search: '',
-    category: '',
     isVegetarian: false,
     isSpicy: false,
     sort: '',
     page: 1,
     limit: 12,
-    restaurant: searchParams.get('restaurant') || '',
   });
   const [showFilters, setShowFilters] = useState(false);
+  const foodListRef = useRef<HTMLDivElement>(null);
 
-  const { data, isLoading, error } = useGetFoodItemsQuery(filters);
+  const { data, isLoading, error } = useGetFoodItemsQuery({ ...filters, category: selectedCategory, restaurant: selectedRestaurant });
 
   const categories = [
     'All',
@@ -38,6 +39,25 @@ const MenuPage: React.FC = () => {
     { value: 'popular', label: 'Most Popular' },
   ];
 
+  useEffect(() => {
+    if (selectedCategory) {
+      requestAnimationFrame(() => foodListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    }
+  }, [selectedCategory]);
+
+  const selectCategory = (category: string) => {
+    const value = category === 'All' ? '' : category.toLowerCase();
+    setFilters((current) => ({ ...current, page: 1 }));
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set('category', value);
+      else next.delete('category');
+      return next;
+    });
+    setShowFilters(false);
+    requestAnimationFrame(() => foodListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setFilters({ ...filters, page: 1 });
@@ -46,14 +66,13 @@ const MenuPage: React.FC = () => {
   const clearFilters = () => {
     setFilters({
       search: '',
-      category: '',
       isVegetarian: false,
       isSpicy: false,
       sort: '',
       page: 1,
       limit: 12,
-      restaurant: '',
     });
+    setSearchParams({});
   };
 
   return (
@@ -128,8 +147,9 @@ const MenuPage: React.FC = () => {
                   {categories.map((cat) => (
                     <button
                       key={cat}
-                      onClick={() => setFilters({ ...filters, category: cat === 'All' ? '' : cat.toLowerCase() })}
-                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${(cat === 'All' && !filters.category) || filters.category === cat.toLowerCase()
+                      onClick={() => selectCategory(cat)}
+                      aria-pressed={(cat === 'All' && !selectedCategory) || selectedCategory === cat.toLowerCase()}
+                      className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${(cat === 'All' && !selectedCategory) || selectedCategory === cat.toLowerCase()
                           ? 'bg-primary-500/20 text-primary-400'
                           : 'hover:bg-white/5'
                         }`}
@@ -176,11 +196,11 @@ const MenuPage: React.FC = () => {
           </div>
 
           {/* Food Grid */}
-          <div className="flex-1">
+          <div ref={foodListRef} className="flex-1 scroll-mt-24">
             {isLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="skeleton h-80 rounded-2xl" />
+                {['menu-loading-a','menu-loading-b','menu-loading-c','menu-loading-d','menu-loading-e','menu-loading-f'].map((slot) => (
+                  <div key={slot} className="skeleton h-80 rounded-2xl" />
                 ))}
               </div>
             ) : error ? (
@@ -188,10 +208,16 @@ const MenuPage: React.FC = () => {
                 <p className="text-white/60">Failed to load menu. Please try again.</p>
               </div>
             ) : data?.data?.foodItems?.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-white/60 mb-4">No items available</p>
-                <button onClick={clearFilters} className="btn btn-outline">
-                  Clear Filters
+              <div className="card mx-auto max-w-xl border-primary-500/20 px-6 py-14 text-center shadow-xl shadow-black/10" role="status">
+                <span className="mx-auto mb-5 grid h-20 w-20 place-items-center rounded-full bg-primary-500/10">
+                  <Utensils className="h-10 w-10 text-primary-400" aria-hidden="true" />
+                </span>
+                <h2 className="mb-2 text-xl font-semibold">
+                  {selectedCategory ? 'No foods available in this category yet.' : 'No foods match your filters.'}
+                </h2>
+                <p className="mb-6 text-sm text-white/50">Try browsing the complete menu to discover something delicious.</p>
+                <button onClick={clearFilters} className="btn btn-primary">
+                  Browse All Foods
                 </button>
               </div>
             ) : (

@@ -23,8 +23,12 @@ import {
   notificationRoutes,
   campaignRoutes,
   locationRoutes,
-  restaurantNameChangeRoutes
+  restaurantNameChangeRoutes,
+  chatRoutes,
+  customerOrderNotificationRoutes,
+  paymentRoutes
 } from './routes';
+import featuredFoodRoutes from './routes/featuredFoodRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 
 // Load env vars
@@ -32,7 +36,7 @@ dotenv.config();
 
 // Connect to database and assign permanent IDs to legacy restaurant records.
 import { backfillRestaurantIdentities } from './services/restaurantIdentityService';
-connectDB().then(() => backfillRestaurantIdentities().catch(error => console.error('Restaurant ID backfill failed:', error)));
+import { ensureFeaturedFoodIndex } from './services/featuredFoodService';
 
 const app = express();
 
@@ -54,6 +58,7 @@ if (process.env.NODE_ENV === 'development') {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/food', foodRoutes);
+app.use('/api/foods', featuredFoodRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/categories', categoryRoutes);
@@ -68,6 +73,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/restaurant-name-change-requests', restaurantNameChangeRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/customer-order-notifications', customerOrderNotificationRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Make uploads folder static
 const rootDir = path.resolve();
@@ -95,11 +103,14 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 import { activateDueCampaigns } from './services/campaignService';
-setInterval(() => activateDueCampaigns().catch(console.error), 60000).unref();
-activateDueCampaigns().catch(console.error);
-
-app.listen(PORT, () => {
-  console.log(`
+export const startServer = async () => {
+  await connectDB();
+  await backfillRestaurantIdentities();
+  await ensureFeaturedFoodIndex();
+  await activateDueCampaigns();
+  setInterval(() => activateDueCampaigns().catch(console.error), 60000).unref();
+  return app.listen(PORT, () => {
+    console.log(`
   HalkaBite Server
   ══════════════════════════════════════
   Server running on port ${PORT}
@@ -107,6 +118,14 @@ app.listen(PORT, () => {
    API: http://localhost:${PORT}/api
   ═══════════════════════════════════════
   `);
-});
+  });
+};
+
+if (require.main === module) {
+  startServer().catch(error => {
+    console.error('HalkaBite failed to start:', error instanceof Error ? error.message : error);
+    process.exitCode = 1;
+  });
+}
 
 export default app;

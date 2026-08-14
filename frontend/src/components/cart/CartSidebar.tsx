@@ -98,8 +98,8 @@ const CartSidebar: React.FC = () => {
             </div>
           ) : isLoading ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton h-24 rounded-xl" />
+              {['cart-loading-a', 'cart-loading-b', 'cart-loading-c'].map((slot) => (
+                <div key={slot} className="skeleton h-24 rounded-xl" />
               ))}
             </div>
           ) : !cart || cart.cart.items.length === 0 ? (

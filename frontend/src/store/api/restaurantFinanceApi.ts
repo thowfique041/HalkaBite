@@ -10,7 +10,7 @@ export interface RestaurantAnalytics {
   foodPerformance: { rows: FoodPerformance[]; pagination: { page: number; limit: number; total: number; pages: number } };
 }
 export interface EarningTransaction { _id: string; orderNumber: string; customerName?: string; foodTotal: number; deliveryFee: number; commission: number; restaurantEarnings: number; paymentMethod: string; paymentStatus: string; date: string }
-export interface RestaurantEarnings { commissionRate: number; summary: { today: number; weekly: number; monthly: number; total: number; totalCommission: number; netEarnings: number; withdrawableBalance: number; remainingBalance: number; trends: { today: number; weekly: number; monthly: number } }; transactions: EarningTransaction[]; pagination: { page: number; limit: number; total: number; pages: number } }
+export interface RestaurantEarnings { commissionRate: number | null; summary: { today: number; weekly: number; monthly: number; total: number; totalCommission: number; netEarnings: number; withdrawableBalance: number; remainingBalance: number; trends: { today: number; weekly: number; monthly: number } }; transactions: EarningTransaction[]; pagination: { page: number; limit: number; total: number; pages: number } }
 
 export const restaurantFinanceApi = apiSlice.injectEndpoints({ endpoints: builder => ({
   getOwnerAnalytics: builder.query<ApiResponse<RestaurantAnalytics>, { page?: number; limit?: number; search?: string; sortBy?: string; sortOrder?: string }>({ query: params => ({ url: '/restaurants/owner/analytics', params }), providesTags: ['Order', 'Food', 'Review'] }),

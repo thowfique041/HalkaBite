@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Store, ShoppingBag, DollarSign } from 'lucide-react';
 import { useGetAdminStatsQuery } from '../../store/api/adminApi';
+import { useGetAdminSettingsQuery } from '../../store/api/adminSettingsApi';
 
 const formatRelativeTime = (date: string) => {
     const elapsedSeconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
@@ -15,7 +16,9 @@ const formatRelativeTime = (date: string) => {
 };
 
 const AdminDashboardPage: React.FC = () => {
-    const { data, isLoading, isError, refetch } = useGetAdminStatsQuery();
+    const { data: settings } = useGetAdminSettingsQuery();
+    const refresh = settings?.data?.preferences;
+    const { data, isLoading, isError, refetch } = useGetAdminStatsQuery(undefined, { pollingInterval: refresh?.dashboardRefresh ? refresh.autoRefreshSeconds * 1000 : 0, refetchOnFocus: true });
     const stats = data?.data;
 
     const statCards = [
@@ -43,7 +46,7 @@ const AdminDashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {statCards.map((stat, index) => (
                     <motion.div
-                        key={index}
+                        key={stat.label}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.1 }}

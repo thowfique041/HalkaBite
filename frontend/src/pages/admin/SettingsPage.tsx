@@ -1,204 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useAppSelector } from '../../store/hooks';
-import { useUpdateProfileMutation, useUpdatePasswordMutation } from '../../store/api/authApi';
-import { User, Lock, Save, Shield } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-
-const SettingsPage: React.FC = () => {
-    const { user } = useAppSelector((state) => state.auth);
-    const [updateProfile, { isLoading: isProfileLoading }] = useUpdateProfileMutation();
-    const [updatePassword, { isLoading: isPasswordLoading }] = useUpdatePasswordMutation();
-
-    const [profileData, setProfileData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        address: '',
-    });
-
-    const [passwordData, setPasswordData] = useState({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-    });
-
-    useEffect(() => {
-        if (user) {
-            setProfileData({
-                name: user.name || '',
-                email: user.email || '',
-                phone: user.phone || '',
-                address: typeof user.address === 'string' ? user.address : user.address?.street || '',
-            });
-        }
-    }, [user]);
-
-    const handleProfileSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            // Only send name and phone, address needs proper structure
-            await updateProfile({
-                name: profileData.name,
-                phone: profileData.phone,
-            }).unwrap();
-            toast.success('Profile updated successfully');
-        } catch (error) {
-            toast.error('Failed to update profile');
-        }
-    };
-
-    const handlePasswordSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (passwordData.newPassword !== passwordData.confirmPassword) {
-            toast.error('Passwords do not match');
-            return;
-        }
-        try {
-            await updatePassword({
-                currentPassword: passwordData.currentPassword,
-                newPassword: passwordData.newPassword,
-            }).unwrap();
-            toast.success('Password updated successfully');
-            setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        } catch (error) {
-            toast.error('Failed to update password');
-        }
-    };
-
-    return (
-        <div className="max-w-4xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8">Settings</h1>
-
-            <div className="grid gap-8">
-                {/* Profile Settings */}
-                <div className="card p-6">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-xl bg-primary-500/20 text-primary-400">
-                            <User className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold">Profile Settings</h2>
-                            <p className="text-white/60 text-sm">Update your personal information</p>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleProfileSubmit} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-white/60">Full Name</label>
-                                <input
-                                    type="text"
-                                    value={profileData.name}
-                                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                                    className="input w-full"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-white/60">Email Address</label>
-                                <input
-                                    type="email"
-                                    value={profileData.email}
-                                    disabled
-                                    className="input w-full opacity-50 cursor-not-allowed"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-white/60">Phone Number</label>
-                                <input
-                                    type="tel"
-                                    value={profileData.phone}
-                                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                                    className="input w-full"
-                                    placeholder="+880..."
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-white/60">Address</label>
-                            <input
-                                type="text"
-                                value={profileData.address || ''}
-                                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                                className="input w-full"
-                                placeholder="Your delivery address"
-                            />
-                        </div>
-
-                        <div className="flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={isProfileLoading}
-                                className="btn btn-primary"
-                            >
-                                <Save className="w-4 h-4 mr-2" />
-                                {isProfileLoading ? 'Saving...' : 'Save Changes'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                {/* Security Settings */}
-                <div className="card p-6">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 rounded-xl bg-red-500/20 text-red-400">
-                            <Lock className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold">Security</h2>
-                            <p className="text-white/60 text-sm">Change your password</p>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handlePasswordSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-white/60">Current Password</label>
-                            <input
-                                type="password"
-                                value={passwordData.currentPassword}
-                                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                                className="input w-full"
-                                required
-                            />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-white/60">New Password</label>
-                                <input
-                                    type="password"
-                                    value={passwordData.newPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                                    className="input w-full"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-white/60">Confirm New Password</label>
-                                <input
-                                    type="password"
-                                    value={passwordData.confirmPassword}
-                                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                    className="input w-full"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end">
-                            <button
-                                type="submit"
-                                disabled={isPasswordLoading}
-                                className="btn btn-secondary"
-                            >
-                                <Shield className="w-4 h-4 mr-2" />
-                                {isPasswordLoading ? 'Updating...' : 'Update Password'}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-export default SettingsPage;
+import React,{useEffect,useState}from'react';import{Bell,Database,Download,Globe2,LockKeyhole,MonitorCog,RefreshCw,Save,ShieldCheck,Trash2}from'lucide-react';import toast from'react-hot-toast';import{useNavigate}from'react-router-dom';
+import{useUpdatePasswordMutation}from'../../store/api/authApi';import{useGetAdminSettingsQuery,useUpdateAdminSettingsMutation,useLazyExportAdminSettingsQuery,useGetAuthSessionsQuery,useRevokeAuthSessionMutation,useRevokeOtherSessionsMutation,useRevokeAllSessionsMutation,type AdminSettings}from'../../store/api/adminSettingsApi';import{useAppDispatch,useAppSelector}from'../../store/hooks';import{logout}from'../../store/slices/authSlice';import UserAvatar from'../../components/common/UserAvatar';
+import{formatAdminDateTime,setAdminLocalePreferences}from'../../utils/adminDateTime';
+const Toggle=({label,checked,onChange}:{label:string;checked:boolean;onChange:(v:boolean)=>void})=><label className="flex items-center justify-between rounded-xl bg-white/[.035] p-3"><span className="text-sm">{label}</span><input type="checkbox" checked={checked} onChange={e=>onChange(e.target.checked)} className="h-5 w-5 accent-orange-500"/></label>;
+const message=(e:unknown,fallback:string)=>typeof e==='object'&&e&&'data'in e&&typeof(e as{data?:{message?:string}}).data?.message==='string'?(e as{data:{message:string}}).data.message:fallback;
+const SettingsPage:React.FC=()=>{const user=useAppSelector(s=>s.auth.user),dispatch=useAppDispatch(),navigate=useNavigate();const{data,isLoading}=useGetAdminSettingsQuery();const[form,setForm]=useState<AdminSettings>();const[saveSettings,{isLoading:saving}]=useUpdateAdminSettingsMutation();const[exportSettings,{isFetching:exporting}]=useLazyExportAdminSettingsQuery();const{data:sessionsData,isLoading:sessionsLoading}=useGetAuthSessionsQuery();const[revoke]=useRevokeAuthSessionMutation();const[revokeOthers]=useRevokeOtherSessionsMutation();const[revokeAll]=useRevokeAllSessionsMutation();const[updatePassword,{isLoading:passwordLoading}]=useUpdatePasswordMutation();const[password,setPassword]=useState({currentPassword:'',newPassword:'',confirmPassword:''});
+ useEffect(()=>{if(data?.data)setForm(data.data)},[data]);
+ useEffect(()=>{if(!form)return;const root=document.documentElement;const dark=form.appearance.theme==='system'?window.matchMedia('(prefers-color-scheme: dark)').matches:form.appearance.theme==='dark';root.dataset.theme=dark?'dark':'light';root.dataset.contrast=form.accessibility.highContrast?'high':'normal';root.dataset.motion=form.accessibility.reducedMotion?'reduced':'normal';root.dataset.fontSize=form.accessibility.fontSize;root.lang=form.locale.language;root.style.setProperty('--admin-accent',{blue:'#3b82f6',purple:'#a855f7',green:'#22c55e',orange:'#f97316',red:'#ef4444'}[form.appearance.primaryColor]);setAdminLocalePreferences(form.locale)},[form]);
+ type SettingsSection=Exclude<keyof AdminSettings,'_id'>;
+ const patch=<S extends SettingsSection>(section:S,value:Partial<AdminSettings[S]>)=>setForm(current=>current?{...current,[section]:{...current[section],...value}}:current);
+ const save=async()=>{if(!form)return;try{await saveSettings({appearance:form.appearance,locale:form.locale,notifications:form.notifications,security:form.security,preferences:form.preferences,accessibility:form.accessibility}).unwrap();toast.success(form.locale.language==='bn'?'সেটিংস সংরক্ষিত হয়েছে':'Settings saved successfully')}catch(e){toast.error(message(e,'Settings could not be saved'))}};
+ const passwordSubmit=async(e:React.FormEvent)=>{e.preventDefault();if(password.newPassword!==password.confirmPassword)return toast.error('Passwords do not match');if(password.newPassword.length<6)return toast.error('Password must be at least 6 characters');try{await updatePassword({currentPassword:password.currentPassword,newPassword:password.newPassword}).unwrap();setPassword({currentPassword:'',newPassword:'',confirmPassword:''});toast.success('Password changed securely')}catch(e){toast.error(message(e,'Password change failed'))}};
+ const download=async()=>{try{const content=await exportSettings().unwrap();const url=URL.createObjectURL(new Blob([content],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`halkabite-settings-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(url)}catch(e){toast.error(message(e,'Export failed'))}};
+ const endAll=async()=>{try{await revokeAll().unwrap();dispatch(logout());navigate('/login');toast.success('All sessions logged out')}catch(e){toast.error(message(e,'Could not log out sessions'))}};
+ if(isLoading||!form)return <div className="mx-auto max-w-5xl space-y-4">{Array.from({length:5}).map((_,i)=><div key={i} className="h-36 animate-pulse rounded-2xl bg-white/5"/>)}</div>;
+ const bn=form.locale.language==='bn',t=(en:string,bangla:string)=>bn?bangla:en;
+ return <div className="mx-auto max-w-5xl space-y-6"><header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium text-primary-400">{t('Application configuration','অ্যাপ্লিকেশন কনফিগারেশন')}</p><h1 className="mt-1 text-3xl font-bold">{t('Admin Settings','অ্যাডমিন সেটিংস')}</h1><p className="mt-2 text-white/50">{t('Persistent preferences, security and active sessions.','স্থায়ী পছন্দ, নিরাপত্তা এবং সক্রিয় সেশন।')}</p></div><div className="flex items-center gap-3 rounded-2xl bg-white/[.035] p-3"><UserAvatar name={user?.name} src={user?.avatar}/><div><b>{user?.name}</b><small className="block text-white/40">{t('System-controlled name','সিস্টেম-নিয়ন্ত্রিত নাম')}</small></div></div></header>
+ <section className="card p-6"><h2 className="flex items-center gap-2 text-xl font-bold"><MonitorCog className="text-purple-400"/>{t('Appearance','চেহারা')}</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><label className="text-sm text-white/60">{t('Theme','থিম')}<select className="input mt-2" value={form.appearance.theme} onChange={e=>patch('appearance',{theme:e.target.value as AdminSettings['appearance']['theme']})}><option value="light">Light</option><option value="dark">Dark</option><option value="system">System</option></select></label><fieldset><legend className="text-sm text-white/60">{t('Primary Color','প্রধান রঙ')}</legend><div className="mt-3 flex flex-wrap gap-3">{(['blue','purple','green','orange','red']as const).map(color=><button key={color} onClick={()=>patch('appearance',{primaryColor:color})} aria-label={`Use ${color}`} className={`h-10 w-10 rounded-full border-4 transition ${form.appearance.primaryColor===color?'scale-110 border-white':'border-transparent'}`} style={{backgroundColor:{blue:'#3b82f6',purple:'#a855f7',green:'#22c55e',orange:'#f97316',red:'#ef4444'}[color]}}/>)}</div></fieldset></div></section>
+ <section className="card p-6"><h2 className="flex items-center gap-2 text-xl font-bold"><Globe2 className="text-blue-400"/>{t('Language & Region','ভাষা ও অঞ্চল')}</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm text-white/60">Language<select className="input mt-2" value={form.locale.language} onChange={e=>patch('locale',{language:e.target.value as'en'|'bn'})}><option value="en">English</option><option value="bn">বাংলা</option></select></label><label className="text-sm text-white/60">Timezone<select className="input mt-2" value={form.locale.timezone} onChange={e=>patch('locale',{timezone:e.target.value})}>{['Asia/Dhaka','UTC','Asia/Kolkata','Europe/London','America/New_York'].map(v=><option key={v}>{v}</option>)}</select></label><label className="text-sm text-white/60">Date Format<select className="input mt-2" value={form.locale.dateFormat} onChange={e=>patch('locale',{dateFormat:e.target.value as AdminSettings['locale']['dateFormat']})}>{['DD/MM/YYYY','MM/DD/YYYY','YYYY-MM-DD'].map(v=><option key={v}>{v}</option>)}</select></label><label className="text-sm text-white/60">Time Format<select className="input mt-2" value={form.locale.timeFormat} onChange={e=>patch('locale',{timeFormat:e.target.value as'12h'|'24h'})}><option value="12h">12 Hour</option><option value="24h">24 Hour</option></select></label></div></section>
+ <section className="card p-6"><h2 className="flex items-center gap-2 text-xl font-bold"><Bell className="text-yellow-400"/>{t('Notifications','নোটিফিকেশন')}</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{([['push','Push Notifications'],['email','Email Notifications'],['system','System Notifications'],['orders','Order Alerts'],['restaurants','Restaurant Alerts'],['complaints','Complaint Alerts'],['userReports','User Reports']]as const).map(([key,label])=><Toggle key={key} label={label} checked={form.notifications[key]} onChange={async value=>{if(key==='push'&&value&&'Notification'in window&&await Notification.requestPermission()!=='granted')return toast.error('Browser notification permission was not granted');patch('notifications',{[key]:value})}}/>)}</div></section>
+ <section className="card p-6"><h2 className="flex items-center gap-2 text-xl font-bold"><LockKeyhole className="text-red-400"/>{t('Security','নিরাপত্তা')}</h2><form onSubmit={passwordSubmit} className="mt-5 grid gap-4 md:grid-cols-3"><input required type="password" className="input" placeholder="Current password" value={password.currentPassword} onChange={e=>setPassword({...password,currentPassword:e.target.value})}/><input required minLength={6} type="password" className="input" placeholder="New password" value={password.newPassword} onChange={e=>setPassword({...password,newPassword:e.target.value})}/><input required type="password" className="input" placeholder="Confirm password" value={password.confirmPassword} onChange={e=>setPassword({...password,confirmPassword:e.target.value})}/><button disabled={passwordLoading} className="btn btn-outline md:col-span-3 md:justify-self-start"><ShieldCheck className="mr-2 h-4 w-4"/>{passwordLoading?'Changing…':'Change Password'}</button></form><div className="mt-4"><Toggle label="Two-Factor Authentication" checked={form.security.twoFactorEnabled} onChange={value=>patch('security',{twoFactorEnabled:value})}/></div></section>
+ <section className="card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 p-6"><div><h2 className="text-xl font-bold">{t('Login Sessions','লগইন সেশন')}</h2><p className="text-sm text-white/40">{t('Manage authenticated devices.','অনুমোদিত ডিভাইস পরিচালনা করুন।')}</p></div><div className="flex gap-2"><button onClick={async()=>{try{await revokeOthers().unwrap();toast.success('Other sessions logged out')}catch(e){toast.error(message(e,'Action failed'))}}} className="btn btn-ghost py-2 text-xs">Logout Others</button><button onClick={endAll} className="btn bg-red-600 py-2 text-xs">Logout All</button></div></div><div className="divide-y divide-white/5">{sessionsLoading?<p className="p-6 text-white/40">Loading sessions…</p>:sessionsData?.data?.map(session=><div key={session._id} className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><b>{session.device} · {session.browser}{session.isCurrent&&<span className="ml-2 rounded-full bg-green-500/15 px-2 py-1 text-xs text-green-300">Current</span>}</b><p className="mt-1 text-xs text-white/40">IP {session.ip} · Login {formatAdminDateTime(session.loginAt)} · Active {formatAdminDateTime(session.lastActiveAt)}</p></div><button onClick={async()=>{try{const result=await revoke(session._id).unwrap();if(result.data?.loggedOutCurrent){dispatch(logout());navigate('/login')}else toast.success('Session logged out')}catch(e){toast.error(message(e,'Could not log out session'))}}} className="rounded-lg p-2 text-red-300 hover:bg-red-500/10" aria-label="Log out session"><Trash2/></button></div>)}</div></section>
+ <section className="card p-6"><h2 className="flex items-center gap-2 text-xl font-bold"><RefreshCw className="text-cyan-400"/>{t('Preferences','পছন্দসমূহ')}</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><label className="text-sm text-white/60">Auto Refresh<select className="input mt-2" value={form.preferences.autoRefreshSeconds} onChange={e=>patch('preferences',{autoRefreshSeconds:Number(e.target.value)})}>{[0,15,30,60,120,300].map(v=><option value={v} key={v}>{v===0?'Disabled':`${v} seconds`}</option>)}</select></label><label className="text-sm text-white/60">Default Page<select className="input mt-2" value={form.preferences.defaultPage} onChange={e=>patch('preferences',{defaultPage:e.target.value as AdminSettings['preferences']['defaultPage']})}><option value="/admin">Dashboard</option><option value="/admin/orders">Orders</option><option value="/admin/restaurants">Restaurants</option><option value="/admin/users">Users</option></select></label><label className="text-sm text-white/60">Sidebar State<select className="input mt-2" value={form.preferences.sidebarBehavior} onChange={e=>patch('preferences',{sidebarBehavior:e.target.value as AdminSettings['preferences']['sidebarBehavior']})}><option value="remember">Remember Last State</option><option value="expanded">Always Expanded</option><option value="collapsed">Always Collapsed</option></select></label><div className="space-y-3"><Toggle label="Dashboard Refresh" checked={form.preferences.dashboardRefresh} onChange={value=>patch('preferences',{dashboardRefresh:value})}/><Toggle label="Remember Last Menu" checked={form.preferences.rememberLastMenu} onChange={value=>patch('preferences',{rememberLastMenu:value})}/>{form.preferences.sidebarBehavior==='remember'&&<Toggle label="Sidebar Collapsed" checked={form.preferences.sidebarCollapsed} onChange={value=>patch('preferences',{sidebarCollapsed:value})}/>}</div></div></section>
+ <section className="card p-6"><h2 className="text-xl font-bold">{t('Accessibility','অ্যাক্সেসিবিলিটি')}</h2><div className="mt-5 grid gap-4 md:grid-cols-2"><label className="text-sm text-white/60">Font Size<select className="input mt-2" value={form.accessibility.fontSize} onChange={e=>patch('accessibility',{fontSize:e.target.value as AdminSettings['accessibility']['fontSize']})}><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label><div className="space-y-3"><Toggle label="High Contrast" checked={form.accessibility.highContrast} onChange={value=>patch('accessibility',{highContrast:value})}/><Toggle label="Reduced Motion" checked={form.accessibility.reducedMotion} onChange={value=>patch('accessibility',{reducedMotion:value})}/></div></div></section>
+ <section className="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="flex items-center gap-2 text-xl font-bold"><Database className="text-green-400"/>Backup</h2><p className="mt-1 text-sm text-white/40">Download the complete persisted administrator configuration.</p></div><button onClick={download} disabled={exporting} className="btn btn-outline"><Download className="mr-2 h-4 w-4"/>{exporting?'Exporting…':'Export Settings JSON'}</button></section>
+ <button onClick={save} disabled={saving} className="btn btn-primary"><Save className="mr-2 h-4 w-4"/>{saving?t('Saving…','সংরক্ষণ হচ্ছে…'):t('Save All Settings','সব সেটিংস সংরক্ষণ করুন')}</button></div>};export default SettingsPage;

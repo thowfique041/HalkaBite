@@ -1,6 +1,7 @@
 # Environment and credentials
 .env
 .env.*
+*.env.local
 !.env.example
 !**/.env.example
 
@@ -9,8 +10,19 @@ node_modules/
 
 # Generated output
 dist/
+dist-ssr/
 build/
 coverage/
+.vite/
+.parcel-cache/
+.next/
+.nuxt/
+
+# Test and analysis output
+test-results/
+playwright-report/
+.nyc_output/
+.eslintcache
 
 # Logs
 logs/
@@ -30,9 +42,20 @@ Thumbs.db
 
 # Runtime and temporary data
 uploads/
+generated/
 temp/
 tmp/
 *.pid
+*.tmp
+
+# Local databases, exports, and dumps
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.dump
+dump/
+.mongodb/
 
 # Tool caches and generated metadata
 .cache/

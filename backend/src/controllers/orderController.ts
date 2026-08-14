@@ -6,6 +6,9 @@ import orderEventEmitter, { publishOrderEvent } from '../services/orderEventServ
 import { createRestaurantNotification } from '../services/notificationService';
 import { Campaign } from '../models';
 import { discountedPrice, findActiveCampaign } from '../services/campaignService';
+import { createCustomerOrderNotification } from '../services/customerOrderNotificationService';
+import { openSseStream } from '../utils/sse';
+import { resolveCommission } from '../services/commissionService';
 
 // @desc    Create order
 // @route   POST /api/orders
@@ -13,6 +16,7 @@ import { discountedPrice, findActiveCampaign } from '../services/campaignService
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     const {
+      checkoutToken,
       restaurant,
       items,
       deliveryAddress,
@@ -23,10 +27,32 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       cateringDetails
     } = req.body;
 
+    if (checkoutToken !== undefined && (typeof checkoutToken !== 'string' || checkoutToken.length < 16 || checkoutToken.length > 100)) {
+      return res.status(400).json({ success: false, message: 'A valid checkout token is required' });
+    }
+
+    const existingOrder = typeof checkoutToken === 'string'
+      ? await Order.findOne({ user: req.user._id, checkoutToken })
+      : null;
+    if (existingOrder) {
+      return res.status(200).json({
+        success: true,
+        message: 'Order was already placed successfully',
+        data: existingOrder
+      });
+    }
+
     const targetRestaurant = await Restaurant.findOne({ _id: restaurant, isActive: true });
     if (!targetRestaurant) return res.status(404).json({ success: false, message: 'Restaurant is unavailable' });
     if (!targetRestaurant.isOpen || targetRestaurant.acceptingOrders === false) {
       return res.status(409).json({ success: false, message: 'Restaurant is not accepting orders right now' });
+    }
+    const allowedPaymentMethods = ['bkash', 'nagad', 'rocket', 'cod'] as const;
+    if (!allowedPaymentMethods.includes(paymentMethod)) return res.status(400).json({ success: false, message: 'Invalid payment method' });
+    const paymentConfiguration = targetRestaurant.paymentMethods[paymentMethod as typeof allowedPaymentMethods[number]];
+    if (!paymentConfiguration?.enabled) return res.status(409).json({ success: false, message: `${paymentMethod} is not enabled by this restaurant` });
+    if (paymentMethod !== 'cod' && (!('phoneNumber' in paymentConfiguration) || !/^(?:\+8801|01)[3-9]\d{8}$/.test(paymentConfiguration.phoneNumber))) {
+      return res.status(409).json({ success: false, message: `${paymentMethod} is not configured correctly by this restaurant` });
     }
 
     // Calculate totals
@@ -100,8 +126,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const deliveryFee = 50; // Can be dynamic based on location
     const totalAmount = subtotal - discount + deliveryFee;
+    const commissionBase = Math.max(0, subtotal - discount);
+    const commission = await resolveCommission(targetRestaurant._id, commissionBase);
 
+    const isOnlinePayment = paymentMethod !== 'cod';
     const order = await Order.create({
+      checkoutToken,
       user: req.user._id,
       restaurant,
       items: orderItems,
@@ -109,30 +139,47 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       deliveryFee,
       discount,
       totalAmount,
+      commissionMode: commission.mode,
+      commissionValue: commission.value,
+      platformCommission: commission.amount,
+      restaurantEarnings: commission.restaurantEarnings,
+      commissionSetting: commission.settingId,
       deliveryAddress,
       paymentMethod,
+      paymentStatus: 'pending',
+      orderStatus: isOnlinePayment ? 'payment_pending' : 'pending',
       couponCode: couponCode?.toUpperCase(),
       specialInstructions,
       isCatering,
       cateringDetails,
       estimatedDeliveryTime: new Date(Date.now() + 45 * 60 * 1000) // 45 mins
     });
-    for (const application of campaignApplications) await Campaign.findByIdAndUpdate(application.campaign._id, { $inc: { 'metrics.redemptions': 1, 'metrics.revenueGenerated': application.revenue }, $push: { usageHistory: { customer: req.user._id, order: order._id, discountAmount: application.discountAmount, revenue: application.revenue, usedAt: new Date() } } });
 
-    await createRestaurantNotification({
-      restaurantId: order.restaurant.toString(),
-      title: 'New Order Received',
-      message: `${req.user.name} placed order #${order.orderNumber} for ৳${totalAmount.toFixed(0)}.`,
-      type: 'new_order',
-      orderId: order._id.toString(),
-      metadata: { customerName: req.user.name, orderNumber: order.orderNumber, totalAmount }
-    });
-
-    // Clear cart after order
+    // The order is now durable. Clear the authoritative backend cart before
+    // returning success; non-critical notifications must not turn a completed
+    // checkout into an apparent failure that a customer may retry.
     await Cart.findOneAndUpdate(
       { user: req.user._id },
       { items: [], restaurant: null }
     );
+
+    const postOrderTasks: Promise<unknown>[] = [
+      ...campaignApplications.map(application => Campaign.findByIdAndUpdate(application.campaign._id, {
+        $inc: { 'metrics.redemptions': 1, 'metrics.revenueGenerated': application.revenue },
+        $push: { usageHistory: { customer: req.user._id, order: order._id, discountAmount: application.discountAmount, revenue: application.revenue, usedAt: new Date() } }
+      }))
+    ];
+    if (!isOnlinePayment) {
+      postOrderTasks.push(createRestaurantNotification({
+        restaurantId: order.restaurant.toString(),
+        title: 'New Order Received',
+        message: `${req.user.name} placed order #${order.orderNumber} for ৳${totalAmount.toFixed(0)}.`,
+        type: 'new_order',
+        orderId: order._id.toString(),
+        metadata: { customerName: req.user.name, orderNumber: order.orderNumber, totalAmount }
+      }), createCustomerOrderNotification(order, 'pending'));
+    }
+    await Promise.allSettled(postOrderTasks);
 
     // Send confirmation email
     sendOrderConfirmation(
@@ -144,10 +191,23 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     res.status(201).json({
       success: true,
-      message: 'Order placed successfully',
+      message: isOnlinePayment ? 'Payment details are required before this order can be processed' : 'Order placed successfully',
       data: order
     });
   } catch (error: any) {
+    if (error?.code === 11000 && typeof req.body.checkoutToken === 'string') {
+      const existingOrder = await Order.findOne({
+        user: req.user._id,
+        checkoutToken: req.body.checkoutToken
+      });
+      if (existingOrder) {
+        return res.status(200).json({
+          success: true,
+          message: 'Order was already placed successfully',
+          data: existingOrder
+        });
+      }
+    }
     res.status(500).json({
       success: false,
       message: error.message || 'Server error'
@@ -161,31 +221,42 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 export const getMyOrders = async (req: AuthRequest, res: Response) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageSize = Math.min(Math.max(Number(limit) || 10, 1), 100);
+    const match: any = { user: req.user._id };
+    if (status) match.orderStatus = status;
 
-    const query: any = { user: req.user._id };
-    if (status) query.orderStatus = status;
-
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const [orders, total] = await Promise.all([
-      Order.find(query)
-        .populate('restaurant', 'name image')
-        .populate('deliveryPerson', 'name phone avatar')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit)),
-      Order.countDocuments(query)
+    // Resolve required relationships before pagination so totals and page sizes
+    // exclude orphaned orders without changing their stored history.
+    const [result] = await Order.aggregate([
+      { $match: match },
+      { $lookup: { from: 'restaurants', localField: 'restaurant', foreignField: '_id', as: 'restaurantDocument' } },
+      { $unwind: '$restaurantDocument' },
+      { $lookup: { from: 'users', localField: 'restaurantDocument.owner', foreignField: '_id', as: 'restaurantOwner' } },
+      { $unwind: '$restaurantOwner' },
+      { $lookup: { from: 'users', localField: 'deliveryPerson', foreignField: '_id', as: 'deliveryPersonDocument' } },
+      { $set: {
+        restaurant: { _id: '$restaurantDocument._id', name: '$restaurantDocument.name', image: '$restaurantDocument.image' },
+        deliveryPerson: { $arrayElemAt: ['$deliveryPersonDocument', 0] }
+      } },
+      { $project: { restaurantDocument: 0, restaurantOwner: 0, deliveryPersonDocument: 0, 'deliveryPerson.password': 0 } },
+      { $facet: {
+        orders: [{ $sort: { createdAt: -1 } }, { $skip: (currentPage - 1) * pageSize }, { $limit: pageSize }],
+        metadata: [{ $count: 'total' }]
+      } }
     ]);
+    const orders = result?.orders || [];
+    const total = result?.metadata?.[0]?.total || 0;
 
     res.status(200).json({
       success: true,
       data: {
         orders,
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page: currentPage,
+          limit: pageSize,
           total,
-          pages: Math.ceil(total / Number(limit))
+          pages: Math.ceil(total / pageSize)
         }
       }
     });
@@ -214,13 +285,20 @@ export const getRestaurantOrders = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const query: any = { restaurant: restaurant._id };
+    // An online order is processable only after payment verification. The
+    // payment predicate also protects legacy unpaid orders stored as pending.
+    const query: any = {
+      restaurant: restaurant._id,
+      $or: [{ paymentMethod: 'cod' }, { paymentStatus: 'paid' }],
+      orderStatus: { $nin: ['payment_pending', 'payment_failed'] }
+    };
     if (status) query.orderStatus = status;
 
     const skip = (Number(page) - 1) * Number(limit);
 
     const [orders, total] = await Promise.all([
       Order.find(query)
+        .select('-deliveryEarning -deliveryPlatformShare -deliveryEarningMode -deliveryEarningValue -deliveryEarningStatus -deliverySettlement')
         .populate('user', 'name email phone')
         .populate('deliveryPerson', 'name phone avatar')
         .sort({ createdAt: -1 })
@@ -255,6 +333,7 @@ export const getRestaurantOrders = async (req: AuthRequest, res: Response) => {
 export const getOrder = async (req: AuthRequest, res: Response) => {
   try {
     const order = await Order.findById(req.params.id)
+      .select(req.user.role === 'restaurant' ? '-deliveryEarning -deliveryPlatformShare -deliveryEarningMode -deliveryEarningValue -deliveryEarningStatus -deliverySettlement' : '')
       .populate('restaurant', 'name address phone image')
       .populate('deliveryPerson', 'name phone avatar')
       .populate('items.foodItem', 'image');
@@ -295,7 +374,7 @@ export const getOrder = async (req: AuthRequest, res: Response) => {
 // @access  Private/Admin
 export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
-    const { orderStatus, paymentStatus } = req.body;
+    const { orderStatus } = req.body;
     const allowedStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'];
     if (!allowedStatuses.includes(orderStatus)) {
       return res.status(400).json({ success: false, message: 'Invalid order status' });
@@ -308,6 +387,11 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
         success: false,
         message: 'Order not found'
       });
+    }
+
+    const processingStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'];
+    if (order.paymentMethod !== 'cod' && order.paymentStatus !== 'paid' && processingStatuses.includes(orderStatus)) {
+      return res.status(409).json({ success: false, message: 'Online payment must be verified before this order can enter restaurant processing' });
     }
 
     if (req.user.role === 'restaurant') {
@@ -326,9 +410,8 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const previousPaymentStatus = order.paymentStatus;
+    const previousOrderStatus = order.orderStatus;
     order.orderStatus = orderStatus;
-    if (paymentStatus) order.paymentStatus = paymentStatus;
 
     // Publishing an order clears stale/null assignments so every eligible
     // online courier can discover it through the delivery queue.
@@ -337,22 +420,18 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       order.set('deliveryStatus', undefined);
       order.rejectedBy = [];
     }
-    if (orderStatus === 'delivered') order.actualDeliveryTime = new Date();
-    await order.save();
-    if (paymentStatus === 'paid' && previousPaymentStatus !== 'paid') {
-      await createRestaurantNotification({
-        restaurantId: order.restaurant.toString(), title: 'Payment Received',
-        message: `Payment of ৳${order.totalAmount.toFixed(0)} was received for order #${order.orderNumber}.`,
-        type: 'payment_received', orderId: order._id.toString(),
-        metadata: { orderNumber: order.orderNumber, amount: order.totalAmount }
-      });
+    if (orderStatus === 'delivered') {
+      order.actualDeliveryTime = new Date();
+      if (order.paymentMethod === 'cod') order.paymentStatus = 'paid';
     }
-    if (orderStatus === 'ready') {
+    await order.save();
+    if (previousOrderStatus !== orderStatus) await createCustomerOrderNotification(order, orderStatus);
+    if (previousOrderStatus !== orderStatus) {
       publishOrderEvent({
         orderId: order._id.toString(),
         orderNumber: order.orderNumber,
-        type: 'order_ready',
-        status: 'ready',
+        type: orderStatus === 'ready' ? 'order_ready' : 'order_status_changed',
+        status: orderStatus,
         occurredAt: new Date().toISOString()
       });
     }
@@ -407,6 +486,8 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
 
     order.orderStatus = 'cancelled';
     await order.save();
+    await createCustomerOrderNotification(order, 'cancelled');
+    publishOrderEvent({orderId:order._id.toString(),orderNumber:order.orderNumber,type:'order_status_changed',status:'cancelled',occurredAt:new Date().toISOString()});
     await createRestaurantNotification({
       restaurantId: order.restaurant.toString(), title: 'Order Cancelled',
       message: `Order #${order.orderNumber} has been cancelled.`, type: 'order_cancelled',
@@ -471,22 +552,11 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
 };
 
 export const streamOrderEvents = async (req: AuthRequest, res: Response) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-  res.write(`event: connected\ndata: ${JSON.stringify({ connected: true })}\n\n`);
-
-  const sendEvent = (event: unknown) => {
-    res.write(`event: order-lifecycle\ndata: ${JSON.stringify(event)}\n\n`);
-  };
+  const stream = openSseStream(req, res);
+  stream.send({ connected: true }, 'connected');
+  const sendEvent = (event: unknown) => stream.send(event, 'order-lifecycle');
   orderEventEmitter.on('order-lifecycle', sendEvent);
-  const heartbeat = setInterval(() => res.write(': heartbeat\n\n'), 25000);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    orderEventEmitter.off('order-lifecycle', sendEvent);
-  });
+  stream.onClose(() => orderEventEmitter.off('order-lifecycle', sendEvent));
 };
 
 // @desc    Reorder previous order

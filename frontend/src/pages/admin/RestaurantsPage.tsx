@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { useGetRestaurantsQuery, useDeleteRestaurantMutation } from '../../store/api/restaurantApi';
-import { useApproveRestaurantMutation } from '../../store/api/adminApi';
-import { Edit, Trash2, Power, Megaphone, X } from 'lucide-react';
+import { useDeleteRestaurantMutation } from '../../store/api/restaurantApi';
+import { useApproveRestaurantMutation, useGetAdminRestaurantsQuery } from '../../store/api/adminApi';
+import { BarChart3, Trash2, Power, Megaphone, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useSendRestaurantAnnouncementMutation } from '../../store/api/notificationApi';
+import { useNavigate } from 'react-router-dom';
 
 const RestaurantsPage: React.FC = () => {
-    const { data: restaurants, isLoading } = useGetRestaurantsQuery({});
+    const { data: restaurants, isLoading } = useGetAdminRestaurantsQuery({ limit: 100 });
+    const navigate = useNavigate();
     const [approveRestaurant] = useApproveRestaurantMutation();
     const [deleteRestaurant, { isLoading: isDeleting }] = useDeleteRestaurantMutation();
     const [sendAnnouncement, { isLoading: isSending }] = useSendRestaurantAnnouncementMutation();
@@ -53,7 +55,7 @@ const RestaurantsPage: React.FC = () => {
 
             <div className="grid gap-6">
                 {restaurants?.data?.restaurants?.map((restaurant) => (
-                    <div key={restaurant._id} className="card p-6 flex items-center gap-6">
+                    <div key={restaurant._id} role="link" tabIndex={0} onClick={() => navigate(`/admin/restaurants/${restaurant._id}`)} onKeyDown={e=>{if(e.key==='Enter')navigate(`/admin/restaurants/${restaurant._id}`)}} className="card p-6 flex cursor-pointer items-center gap-6 transition hover:-translate-y-0.5 hover:border-primary-400/30">
                         <img
                             src={restaurant.image || 'https://via.placeholder.com/100'}
                             alt={restaurant.name}
@@ -84,9 +86,9 @@ const RestaurantsPage: React.FC = () => {
                         </div>
 
                         <div className="flex items-center gap-2 border-l border-white/10 pl-6">
-                            <button onClick={() => setAnnouncement({ restaurantId: restaurant._id, restaurantName: restaurant.name, title: 'Admin Announcement', message: '' })} className="p-2 rounded-lg hover:bg-primary-500/10 text-primary-400 transition-colors" title="Send announcement"><Megaphone className="w-5 h-5" /></button>
+                            <button onClick={e => {e.stopPropagation();setAnnouncement({ restaurantId: restaurant._id, restaurantName: restaurant.name, title: 'Admin Announcement', message: '' });}} className="p-2 rounded-lg hover:bg-primary-500/10 text-primary-400 transition-colors" title="Send announcement"><Megaphone className="w-5 h-5" /></button>
                             <button
-                                onClick={() => handleToggleStatus(restaurant._id)}
+                                onClick={(e) => {e.stopPropagation();handleToggleStatus(restaurant._id);}}
                                 className={`p-2 rounded-lg transition-colors ${restaurant.isActive
                                     ? 'hover:bg-red-500/10 text-red-400'
                                     : 'hover:bg-green-500/10 text-green-400'
@@ -95,11 +97,11 @@ const RestaurantsPage: React.FC = () => {
                             >
                                 <Power className="w-5 h-5" />
                             </button>
-                            <button className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors">
-                                <Edit className="w-5 h-5" />
+                            <button onClick={e=>{e.stopPropagation();navigate(`/admin/restaurants/${restaurant._id}`)}} className="p-2 rounded-lg hover:bg-white/10 text-white/60 hover:text-white transition-colors" title="View performance">
+                                <BarChart3 className="w-5 h-5" />
                             </button>
                             <button
-                                onClick={() => handleDelete(restaurant._id, restaurant.name)}
+                                onClick={(e) => {e.stopPropagation();handleDelete(restaurant._id, restaurant.name);}}
                                 disabled={isDeleting}
                                 className="p-2 rounded-lg hover:bg-red-500/10 text-red-400 transition-colors disabled:opacity-50"
                                 title="Delete restaurant"

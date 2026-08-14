@@ -16,6 +16,9 @@ export interface IFoodItemDocument extends Document {
   preparationTime: number;
   rating: number;
   reviewCount: number;
+  isFeatured: boolean;
+  featuredBy?: mongoose.Types.ObjectId;
+  featuredAt?: Date;
   discount?: number;
   tags: string[];
   ingredients?: string[];
@@ -88,6 +91,9 @@ const foodItemSchema = new Schema<IFoodItemDocument>({
     type: Number,
     default: 0
   },
+  isFeatured: { type: Boolean, default: false },
+  featuredBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  featuredAt: Date,
   discount: {
     type: Number,
     min: 0,
@@ -109,5 +115,6 @@ const foodItemSchema = new Schema<IFoodItemDocument>({
 foodItemSchema.index({ name: 'text', description: 'text', tags: 'text' });
 foodItemSchema.index({ category: 1, isAvailable: 1 });
 foodItemSchema.index({ restaurant: 1, isAvailable: 1 });
+foodItemSchema.index({ isFeatured: 1 }, { name: 'one_featured_food', unique: true, partialFilterExpression: { isFeatured: true } });
 
 export const FoodItem = mongoose.model<IFoodItemDocument>('FoodItem', foodItemSchema);

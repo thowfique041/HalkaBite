@@ -33,7 +33,7 @@ const RestaurantsPage: React.FC = () => {
 
         {isLoading ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }, (_, index) => <div key={index} className="skeleton h-96 rounded-2xl" />)}
+            {['restaurant-a','restaurant-b','restaurant-c','restaurant-d','restaurant-e','restaurant-f'].map(slot => <div key={slot} className="skeleton h-96 rounded-2xl" />)}
           </div>
         ) : isError ? (
           <div className="card p-10 text-center">

@@ -37,6 +37,12 @@ export interface IRestaurantDocument extends Document {
     newOrders: boolean; newReviews: boolean; orderCancellation: boolean;
     paymentReceived: boolean; deliveryUpdates: boolean; adminAnnouncements: boolean;
   };
+  paymentMethods: {
+    bkash: { enabled: boolean; phoneNumber: string; accountType: 'Personal' | 'Agent' };
+    nagad: { enabled: boolean; phoneNumber: string; accountType: 'Personal' | 'Agent' };
+    rocket: { enabled: boolean; phoneNumber: string; accountType: 'Personal' | 'Agent' };
+    cod: { enabled: boolean };
+  };
   isActive: boolean;
   openingHours: Array<{
     day: string;
@@ -142,6 +148,12 @@ const restaurantSchema = new Schema<IRestaurantDocument>({
     paymentReceived: { type: Boolean, default: true },
     deliveryUpdates: { type: Boolean, default: true },
     adminAnnouncements: { type: Boolean, default: true }
+  },
+  paymentMethods: {
+    bkash: { enabled: { type: Boolean, default: false }, phoneNumber: { type: String, default: '' }, accountType: { type: String, enum: ['Personal', 'Agent'], default: 'Personal' } },
+    nagad: { enabled: { type: Boolean, default: false }, phoneNumber: { type: String, default: '' }, accountType: { type: String, enum: ['Personal', 'Agent'], default: 'Personal' } },
+    rocket: { enabled: { type: Boolean, default: false }, phoneNumber: { type: String, default: '' }, accountType: { type: String, enum: ['Personal', 'Agent'], default: 'Personal' } },
+    cod: { enabled: { type: Boolean, default: true } }
   },
   isActive: {
     type: Boolean,

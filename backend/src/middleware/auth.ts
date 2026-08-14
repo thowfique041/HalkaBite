@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
-import { User } from '../models';
+import { AuthSession, User } from '../models';
 import { ApiError } from '../utils/apiResponse';
 
 export interface AuthRequest extends Request {
   user?: any;
+  sessionId?: string;
 }
 
 export const protect = async (
@@ -72,6 +73,12 @@ export const optionalProtect = async (req: AuthRequest, res: Response, next: Nex
       : req.cookies?.token;
     if (!token) return next();
     const decoded = verifyToken(token);
+    if (decoded.sessionId) {
+      const session = await AuthSession.findOne({ tokenId: decoded.sessionId, revokedAt: { $exists: false }, expiresAt: { $gt: new Date() } });
+      if (!session) return res.status(401).json({ success: false, message: 'This login session is no longer active' });
+      req.sessionId = decoded.sessionId;
+      AuthSession.updateOne({ _id: session._id }, { $set: { lastActiveAt: new Date() } }).catch(() => undefined);
+    }
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ success: false, message: 'User not found' });
     req.user = user;

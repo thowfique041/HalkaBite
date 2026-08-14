@@ -13,3 +13,6 @@ export { default as notificationRoutes } from './notificationRoutes';
 export { default as campaignRoutes } from './campaignRoutes';
 export { default as locationRoutes } from './locationRoutes';
 export { default as restaurantNameChangeRoutes } from './restaurantNameChangeRoutes';
+export { default as chatRoutes } from './chatRoutes';
+export { default as customerOrderNotificationRoutes } from './customerOrderNotificationRoutes';
+export { default as paymentRoutes } from './paymentRoutes';

@@ -20,6 +20,7 @@ import AdminMenuPage from './pages/admin/MenuPage';
 import AdminRestaurantsPage from './pages/admin/RestaurantsPage';
 import AdminOrdersPage from './pages/admin/OrdersPage';
 import SettingsPage from './pages/admin/SettingsPage';
+import AdminProfilePage from './pages/admin/AdminProfilePage';
 import AuthInitializer from './components/auth/AuthInitializer';
 import RestaurantLayout from './components/layout/RestaurantLayout';
 import RestaurantDashboardPage from './pages/restaurant/RestaurantDashboardPage';
@@ -38,6 +39,17 @@ import RestaurantEarningsPage from './pages/restaurant/RestaurantEarningsPage';
 import RestaurantCampaignsPage from './pages/restaurant/RestaurantCampaignsPage';
 import AdminCampaignsPage from './pages/admin/CampaignsPage';
 import RestaurantNameChangeRequestsPage from './pages/admin/RestaurantNameChangeRequestsPage';
+import MessagingPage from './pages/MessagingPage';
+import ChatRealtimeInitializer from './components/chat/ChatRealtimeInitializer';
+import CustomerOrderNotificationInitializer from './components/notifications/CustomerOrderNotificationInitializer';
+import CustomerNotificationsPage from './pages/CustomerNotificationsPage';
+import FoodDetailsPage from './pages/FoodDetailsPage';
+import FeaturedFoodPage from './pages/admin/FeaturedFoodPage';
+import RestaurantDetailsPage from './pages/admin/RestaurantDetailsPage';
+import CommissionSettingsPage from './pages/admin/CommissionSettingsPage';
+import FeaturedFoodSyncInitializer from './components/food/FeaturedFoodSyncInitializer';
+import AdminSettingsInitializer from './components/admin/AdminSettingsInitializer';
+import PaymentVerificationPage from './pages/restaurant/PaymentVerificationPage';
 
 const App: React.FC = () => {
   return (
@@ -47,10 +59,11 @@ const App: React.FC = () => {
           position="top-center"
           toastOptions={{
             duration: 3000,
+            className: 'app-toast',
             style: {
-              background: '#1e1e2e',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--surface-card)',
+              color: 'var(--content-primary)',
+              border: '1px solid var(--border-subtle)',
             },
             success: {
               iconTheme: {
@@ -68,10 +81,15 @@ const App: React.FC = () => {
         />
         <AuthInitializer />
         <OrderSyncInitializer />
+        <ChatRealtimeInitializer />
+        <CustomerOrderNotificationInitializer />
+        <FeaturedFoodSyncInitializer />
+        <AdminSettingsInitializer />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="menu" element={<MenuPage />} />
+            <Route path="food/:id" element={<FoodDetailsPage />} />
             <Route path="restaurants" element={<RestaurantsPage />} />
             <Route path="login" element={<AuthPage mode="login" />} />
             <Route path="register" element={<AuthPage mode="register" />} />
@@ -95,6 +113,8 @@ const App: React.FC = () => {
                 <OrdersPage />
               </ProtectedRoute>
             } />
+            <Route path="messages" element={<ProtectedRoute allowedRoles={['user']}><MessagingPage /></ProtectedRoute>} />
+            <Route path="notifications" element={<ProtectedRoute allowedRoles={['user']}><CustomerNotificationsPage /></ProtectedRoute>} />
           </Route>
 
           {/* Restaurant Dashboard Routes */}
@@ -105,6 +125,7 @@ const App: React.FC = () => {
           }>
             <Route index element={<RestaurantDashboardPage />} />
             <Route path="orders" element={<RestaurantOrdersPage />} />
+            <Route path="payments" element={<PaymentVerificationPage />} />
             <Route path="menu" element={<RestaurantMenuPage />} />
             <Route path="reviews" element={<RestaurantReviewsPage />} />
             <Route path="reviews/food/:foodId" element={<FoodReviewAnalyticsPage />} />
@@ -113,6 +134,7 @@ const App: React.FC = () => {
             <Route path="analytics" element={<RestaurantAnalyticsPage />} />
             <Route path="earnings" element={<RestaurantEarningsPage />} />
             <Route path="campaigns" element={<RestaurantCampaignsPage />} />
+            <Route path="chats" element={<MessagingPage restaurantMode />} />
           </Route>
 
           <Route path="/delivery-dashboard" element={
@@ -130,13 +152,17 @@ const App: React.FC = () => {
             <Route index element={<AdminDashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="menu" element={<AdminMenuPage />} />
+            <Route path="featured-food" element={<FeaturedFoodPage />} />
             <Route path="restaurants" element={<AdminRestaurantsPage />} />
+            <Route path="restaurants/:restaurantId" element={<RestaurantDetailsPage />} />
+            <Route path="commissions" element={<CommissionSettingsPage />} />
             <Route path="restaurant-name-requests" element={<RestaurantNameChangeRequestsPage />} />
             <Route path="delivery-management" element={<DeliveryManagementPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="campaigns" element={<AdminCampaignsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="profile" element={<AdminProfilePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

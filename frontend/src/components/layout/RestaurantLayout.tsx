@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ChefHat, LogOut, Bell, Star, Settings, BarChart3, WalletCards, BadgePercent } from 'lucide-react';
+import { LayoutDashboard, Package, ChefHat, LogOut, Bell, Star, Settings, BarChart3, WalletCards, BadgePercent, MessagesSquare, BadgeDollarSign } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import RestaurantNotificationCenter from '../notifications/RestaurantNotificationCenter';
+import { useUnreadChatCount } from '../chat/useUnreadChatCount';
 
 const RestaurantLayout: React.FC = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { user } = useAppSelector((state) => state.auth);
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
+    const unreadChats = useUnreadChatCount();
 
     // Redirect if not restaurant owner
     if (!user || user.role !== 'restaurant') {
@@ -27,6 +29,8 @@ const RestaurantLayout: React.FC = () => {
     const navLinks = [
         { to: '/restaurant-dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true },
         { to: '/restaurant-dashboard/orders', icon: Package, label: 'Orders' },
+        { to: '/restaurant-dashboard/payments', icon: BadgeDollarSign, label: 'Payment Verification' },
+        { to: '/restaurant-dashboard/chats', icon: MessagesSquare, label: 'Customer Chats' },
         { to: '/restaurant-dashboard/menu', icon: ChefHat, label: 'Menu' },
         { to: '/restaurant-dashboard/analytics', icon: BarChart3, label: 'Analytics' },
         { to: '/restaurant-dashboard/earnings', icon: WalletCards, label: 'Earnings' },
@@ -61,6 +65,7 @@ const RestaurantLayout: React.FC = () => {
                         >
                             <link.icon className="w-5 h-5" />
                             {link.label}
+                            {link.to.endsWith('/chats') && unreadChats > 0 && <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-xs grid place-items-center">{unreadChats > 99 ? '99+' : unreadChats}</span>}
                         </NavLink>
                     ))}
                 </nav>
@@ -107,6 +112,7 @@ const RestaurantLayout: React.FC = () => {
                                 className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl ${isActive ? 'bg-primary-500/20 text-primary-400' : 'text-white/70 bg-white/5'}`}
                             >
                                 <link.icon className="w-5 h-5" /> {link.label}
+                                {link.to.endsWith('/chats') && unreadChats > 0 && <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-xs grid place-items-center">{unreadChats > 99 ? '99+' : unreadChats}</span>}
                             </NavLink>
                         ))}
                         <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 bg-red-500/10">

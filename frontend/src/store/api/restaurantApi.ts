@@ -1,5 +1,6 @@
 import { apiSlice } from './apiSlice';
 import type { Restaurant, ApiResponse, Order } from '../../types';
+import { uniqueById } from '../../utils/uniqueById';
 
 export const restaurantApi = apiSlice.injectEndpoints({
     endpoints: (builder) => ({
@@ -8,6 +9,7 @@ export const restaurantApi = apiSlice.injectEndpoints({
                 url: '/restaurants',
                 params,
             }),
+            transformResponse: (response: ApiResponse<{ restaurants: Restaurant[]; pagination: any }>) => ({ ...response, data: response.data ? { ...response.data, restaurants: uniqueById(response.data.restaurants) } : response.data }),
             providesTags: ['Restaurant'],
         }),
         getRestaurant: builder.query<ApiResponse<Restaurant>, string>({
@@ -23,6 +25,7 @@ export const restaurantApi = apiSlice.injectEndpoints({
                 url: `/restaurants/${id}/orders`,
                 params: { status, page, limit },
             }),
+            transformResponse: (response: ApiResponse<{ orders: Order[]; pagination: any }>) => ({ ...response, data: response.data ? { ...response.data, orders: uniqueById(response.data.orders) } : response.data }),
             providesTags: ['Order'],
         }),
         getRestaurantStats: builder.query<ApiResponse<{
@@ -55,7 +58,9 @@ export const restaurantApi = apiSlice.injectEndpoints({
         }),
         updateMyRestaurantSettings: builder.mutation<ApiResponse<Restaurant>, Partial<Restaurant>>({
             query: (data) => ({ url: '/restaurants/my-restaurant/settings', method: 'PUT', body: data }),
-            invalidatesTags: ['Restaurant'],
+            // Checkout payment options are restaurant-owned settings. Invalidate
+            // both views so a newly enabled method appears without a refresh.
+            invalidatesTags: ['Restaurant', 'Payment'],
         }),
         deleteRestaurant: builder.mutation<ApiResponse, string>({
             query: (id) => ({

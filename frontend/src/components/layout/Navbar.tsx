@@ -1,18 +1,50 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { 
   ShoppingCart,
   Menu, 
   X, 
   Search,
   Mic,
-  MessageCircle
+  MessageCircle,
+  Bell
 } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { toggleMobileMenu, toggleCart, toggleVoiceModal, toggleChat } from '../../store/slices/uiSlice';
 import { logout } from '../../store/slices/authSlice';
 import type { RootState } from '../../store/store';
-import CustomerOfferNotifications from '../notifications/CustomerOfferNotifications';
+import { useUnreadChatCount } from '../chat/useUnreadChatCount';
+import { useGetCustomerOrderNotificationsQuery } from '../../store/api/customerOrderNotificationApi';
+import UserAvatar from '../common/UserAvatar';
+import { useLogoutMutation } from '../../store/api/authApi';
+import { useCartAddedPulse } from '../../hooks/useAnimatedAddToCart';
+
+type CustomerIconLinkProps = {
+  to: '/messages' | '/notifications';
+  label: 'Messages' | 'Notifications';
+  count: number;
+  icon: React.ComponentType<{ className?: string }>;
+  compact?: boolean;
+};
+
+const CustomerIconLink: React.FC<CustomerIconLinkProps> = ({ to, label, count, icon: Icon, compact = false }) => (
+  <NavLink
+    to={to}
+    aria-label={`${label}${count ? `, ${count} unread` : ''}`}
+    title={label}
+    className={({ isActive }) => `group relative grid place-items-center rounded-full outline-none transition-all duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-200 ${compact ? 'h-10 w-10' : 'h-11 w-11'} ${isActive ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/25' : 'bg-white/5 text-white/75 hover:bg-white/10 hover:text-white'}`}
+  >
+    <Icon className="h-5 w-5" />
+    {count > 0 && (
+      <span key={count} aria-hidden="true" className="absolute -right-1 -top-1 grid h-5 min-w-5 animate-bounce place-items-center rounded-full border-2 border-dark-200 bg-red-500 px-1 text-[10px] font-extrabold leading-none text-white shadow-md shadow-red-950/40">
+        {count > 99 ? '99+' : count}
+      </span>
+    )}
+    <span role="tooltip" className="pointer-events-none absolute left-1/2 top-[calc(100%+0.5rem)] z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-dark-100 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+      {label}
+    </span>
+  </NavLink>
+);
 
 const Navbar: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -20,8 +52,14 @@ const Navbar: React.FC = () => {
   const { isAuthenticated, user } = useAppSelector((state: RootState) => state.auth);
   const { itemCount } = useAppSelector((state: RootState) => state.cart);
   const { isMobileMenuOpen } = useAppSelector((state: RootState) => state.ui);
+  const unreadChats = useUnreadChatCount();
+  const { data: orderNotifications } = useGetCustomerOrderNotificationsQuery(undefined, { skip: user?.role !== 'user' });
+  const [logoutRequest] = useLogoutMutation();
+  const isCartPulsing = useCartAddedPulse();
+  const unreadOrderNotifications = orderNotifications?.data.unreadCount || 0;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try { await logoutRequest().unwrap(); } catch { /* local logout must still complete */ }
     dispatch(logout());
     navigate('/');
   };
@@ -55,30 +93,26 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-4">
-            {user?.role === 'user' && <CustomerOfferNotifications />}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {user?.role === 'user' && <CustomerIconLink to="/notifications" label="Notifications" count={unreadOrderNotifications} icon={Bell} compact />}
+            {user?.role === 'user' && <CustomerIconLink to="/messages" label="Messages" count={unreadChats} icon={MessageCircle} compact />}
             {/* Voice Order Button */}
             <button
               onClick={() => dispatch(toggleVoiceModal())}
-              className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 transition-colors"
+              className="order-4 hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-primary-500/20 text-primary-400 hover:bg-primary-500/30 hover:scale-105 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
               title="Voice Order"
+              aria-label="Open voice assistant"
             >
               <Mic className="w-5 h-5" />
-            </button>
-
-            {/* Chat Button */}
-            <button
-              onClick={() => dispatch(toggleChat())}
-              className="hidden md:flex items-center justify-center w-10 h-10 rounded-full bg-secondary-500/20 text-secondary-400 hover:bg-secondary-500/30 transition-colors"
-              title="AI Chat"
-            >
-              <MessageCircle className="w-5 h-5" />
             </button>
 
             {/* Cart Button */}
             <button
               onClick={() => dispatch(toggleCart())}
-              className="relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+              data-cart-animation-target
+              className={`order-3 relative flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 hover:scale-105 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 ${isCartPulsing ? 'cart-added-pulse' : ''}`}
+              aria-label={`Open cart${itemCount ? `, ${itemCount} items` : ''}`}
+              title="Cart"
             >
               <ShoppingCart className="w-5 h-5" />
               {itemCount > 0 && (
@@ -90,14 +124,12 @@ const Navbar: React.FC = () => {
 
             {/* User Menu */}
             {isAuthenticated ? (
-              <div className="relative group">
-                <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-white/10 transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-500 to-secondary-500 flex items-center justify-center">
-                    <span className="text-sm font-bold">{user?.name?.charAt(0) || 'U'}</span>
-                  </div>
+              <div className="order-5 relative group">
+                <button aria-label="Open user profile menu" title="Profile" className="flex items-center space-x-2 p-1 rounded-full hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300">
+                  <UserAvatar name={user?.name} src={user?.avatar} className="h-8 w-8 text-sm" />
                 </button>
                 <div className="absolute right-0 mt-2 w-48 py-2 card opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <Link to="/profile" className="block px-4 py-2 hover:bg-white/10">Profile</Link>
+                  <Link to={user?.role === 'admin' ? '/admin/profile' : '/profile'} className="block px-4 py-2 hover:bg-white/10">Profile</Link>
                   <Link to="/orders" className="block px-4 py-2 hover:bg-white/10">My Orders</Link>
                   {user?.role === 'admin' && (
                     <Link to="/admin" className="block px-4 py-2 hover:bg-white/10">Admin Dashboard</Link>

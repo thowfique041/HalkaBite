@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Minus, Plus, ShoppingBag, Star } from 'lucide-react';
 import type { FoodItem } from '../../types';
-import { useAddToCartMutation } from '../../store/api/cartApi';
 import toast from 'react-hot-toast';
 import { useGetFoodReviewsQuery } from '../../store/api/reviewApi';
 import ReviewList from '../reviews/ReviewList';
+import { useAnimatedAddToCart } from '../../hooks/useAnimatedAddToCart';
 
 interface FoodModalProps {
     food: FoodItem;
@@ -15,7 +15,8 @@ interface FoodModalProps {
 const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
     const [quantity, setQuantity] = useState(1);
     const [specialInstructions, setSpecialInstructions] = useState('');
-    const [addToCart, { isLoading }] = useAddToCartMutation();
+    const { addToCart, isLoading, isAdded } = useAnimatedAddToCart({ name: food.name, image: food.image });
+    const addButtonRef = useRef<HTMLButtonElement>(null);
     const { data: reviewsData, isLoading: reviewsLoading } = useGetFoodReviewsQuery(food._id, {
         skip: !isOpen,
         pollingInterval: isOpen ? 5000 : 0,
@@ -37,9 +38,9 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
                 foodItemId: food._id,
                 quantity,
                 specialInstructions: specialInstructions.trim() || undefined
-            }).unwrap();
+            }, addButtonRef.current);
             toast.success(`${food.name} added to cart!`);
-            onClose();
+            window.setTimeout(onClose, 650);
         } catch (error: unknown) {
             const apiError = error as { data?: { code?: string; message?: string } };
             if (apiError.data?.code === 'DIFFERENT_RESTAURANT') {
@@ -122,18 +123,22 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
                         </div>
 
                         <button
+                            ref={addButtonRef}
                             onClick={handleAddToCart}
                             disabled={isLoading}
-                            className="btn btn-primary flex items-center gap-2 px-8 py-3"
+                            className={`btn btn-primary relative overflow-visible flex items-center gap-2 px-8 py-3 ${isAdded ? 'add-to-cart-success' : ''}`}
                         >
                             {isLoading ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : isAdded ? (
+                                <span>Added ✓</span>
                             ) : (
                                 <>
                                     <ShoppingBag className="w-5 h-5" />
                                     <span>Add to Cart - ৳{Math.round(totalPrice)}</span>
                                 </>
                             )}
+                            {isAdded && <span aria-hidden="true" className="add-to-cart-sparkles"><i /><i /><i /><i /><i /></span>}
                         </button>
                     </div>
 

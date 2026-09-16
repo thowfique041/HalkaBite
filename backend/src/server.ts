@@ -30,6 +30,7 @@ import {
 } from './routes';
 import featuredFoodRoutes from './routes/featuredFoodRoutes';
 import uploadRoutes from './routes/uploadRoutes';
+import { apiRateLimit } from './middleware/rateLimit';
 
 // Load env vars
 dotenv.config();
@@ -46,9 +47,10 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb', parameterLimit: 100 }));
 app.use(cookieParser());
+app.use('/api', apiRateLimit);
 
 // Logging
 if (process.env.NODE_ENV === 'development') {

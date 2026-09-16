@@ -5,6 +5,7 @@ import { sendWelcomeEmail } from '../utils/email';
 import { AuthRequest } from '../middleware/auth';
 import cloudinary from '../config/cloudinary';
 import crypto from 'crypto';
+import { uploadImageBuffer } from './uploadController';
 
 const profileFields = ['name', 'username', 'email', 'phone', 'bio'] as const;
 const publicIdFromUrl = (url?: string) => {
@@ -244,17 +245,19 @@ export const revokeAllSessions = async (req: AuthRequest, res: Response) => {
 };
 
 export const uploadProfileAvatar = async (req: AuthRequest, res: Response) => {
-  const file = req.file as (Express.Multer.File & { filename?: string }) | undefined;
+  const file = req.file;
   if (!file) return res.status(400).json({ success: false, message: 'Please select a JPEG, PNG, or WebP image' });
-  const newPublicId = file.filename || publicIdFromUrl(file.path);
+  let newPublicId: string | undefined;
   try {
+    const uploaded = await uploadImageBuffer(file);
+    newPublicId = uploaded.public_id;
     const previous = await User.findById(req.user._id).select('+avatarPublicId');
     if (!previous) {
       await destroyAvatar(newPublicId);
       return res.status(404).json({ success: false, message: 'User not found' });
     }
     const oldPublicId = previous.avatarPublicId || publicIdFromUrl(previous.avatar);
-    const user = await User.findByIdAndUpdate(req.user._id, { $set: { avatar: file.path, avatarPublicId: newPublicId } }, { new: true, runValidators: true });
+    const user = await User.findByIdAndUpdate(req.user._id, { $set: { avatar: uploaded.secure_url, avatarPublicId: newPublicId } }, { new: true, runValidators: true });
     if (oldPublicId && oldPublicId !== newPublicId) destroyAvatar(oldPublicId).catch(error => console.error('Previous profile image cleanup failed:', error));
     return res.status(200).json({ success: true, message: 'Profile picture updated successfully', data: user });
   } catch (error) {
@@ -305,7 +308,7 @@ export const updatePassword = async (req: AuthRequest, res: Response) => {
     user.password = newPassword;
     await user.save();
 
-    const token = generateToken(user);
+    const token = generateToken(user, req.sessionId);
 
     res.status(200).json({
       success: true,

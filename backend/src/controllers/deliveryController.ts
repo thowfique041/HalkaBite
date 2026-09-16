@@ -13,7 +13,9 @@ const populatedOrder = () => [
 
 // `picked_up` is included only to recover orders created by the previous
 // restaurant UI, which could bypass courier assignment. New orders use `ready`.
-const queueStatus = { $in: ['ready', 'picked_up'] };
+// `picked_up` is a legacy orderStatus value no longer present in the current schema.
+// Keep it in the recovery query while containing the compatibility cast here.
+const queueStatus: { $in: string[] } = { $in: ['ready', 'picked_up'] };
 const unassignedCourier = {
   $or: [
     { deliveryPerson: { $exists: false } },
@@ -21,7 +23,7 @@ const unassignedCourier = {
   ]
 };
 
-const availableOrderFilter = (userId: string) => ({
+const availableOrderFilter = (userId: string): any => ({
   orderStatus: queueStatus,
   ...unassignedCourier,
   rejectedBy: { $nin: [userId] }
@@ -53,11 +55,11 @@ const invalidateDeliveryOrders = async (orders: any[]) => {
           $set: {
             orderStatus: 'cancelled',
             deliveryInvalidatedAt: invalidatedAt,
-            deliveryInvalidReason: reason
+            deliveryInvalidReason: reason!
           }
         }
       }
-    })));
+    })) as any);
     invalidOrders.forEach(({ order, reason }) => publishOrderEvent({
       orderId: order._id.toString(),
       orderNumber: order.orderNumber,
@@ -182,7 +184,7 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
       return res.status(410).json({ success: false, message: 'Order is invalid because its customer or restaurant is unavailable' });
     }
 
-    const order = await Order.findOneAndUpdate(
+    const order: any = await Order.findOneAndUpdate(
       { _id: req.params.id, ...availableOrderFilter(req.user._id) },
       {
         $set: {

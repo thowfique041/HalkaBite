@@ -5,6 +5,7 @@ import { Order, Payment, Restaurant } from '../models';
 import { createCustomerOrderNotification, createCustomerPaymentNotification } from '../services/customerOrderNotificationService';
 import { createRestaurantNotification } from '../services/notificationService';
 import { publishOrderEvent } from '../services/orderEventService';
+import { ManualPaymentStatus } from '../models/Payment';
 
 const onlineMethods = ['bkash', 'nagad', 'rocket'] as const;
 type OnlineMethod = typeof onlineMethods[number];
@@ -73,8 +74,9 @@ export const getRestaurantPayments = async (req: AuthRequest, res: Response) => 
   if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
   const status = typeof req.query.status === 'string' ? req.query.status : 'all';
   const page = Math.max(1, Number(req.query.page) || 1), limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-  const filter: { restaurantId: typeof restaurant._id; status?: string } = { restaurantId: restaurant._id };
-  if (status !== 'all') filter.status = status;
+  const allowedStatuses: ManualPaymentStatus[] = ['pending', 'submitted', 'verified', 'rejected'];
+  const filter: { restaurantId: typeof restaurant._id; status?: ManualPaymentStatus } = { restaurantId: restaurant._id };
+  if (allowedStatuses.includes(status as ManualPaymentStatus)) filter.status = status as ManualPaymentStatus;
   const [payments, total] = await Promise.all([
     Payment.find(filter)
       .populate('orderId', 'orderNumber items subtotal deliveryFee totalAmount orderStatus paymentStatus')

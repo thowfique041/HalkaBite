@@ -44,7 +44,10 @@ export const getMyNameChangeRequests = async (req: AuthRequest, res: Response) =
 };
 
 export const getAllNameChangeRequests = async (req: AuthRequest, res: Response) => {
-  const status = ['pending', 'approved', 'rejected'].includes(String(req.query.status)) ? req.query.status : undefined;
+  const requestedStatus = String(req.query.status || '');
+  const status: 'pending' | 'approved' | 'rejected' | undefined = ['pending', 'approved', 'rejected'].includes(requestedStatus)
+    ? requestedStatus as 'pending' | 'approved' | 'rejected'
+    : undefined;
   const requests = await RestaurantNameChangeRequest.find(status ? { status } : {}).populate('requestedBy', 'name email').populate('approvedBy', 'name email').sort({ requestedAt: -1 }).lean();
   return res.json({ success: true, data: requests });
 };

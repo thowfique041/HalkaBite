@@ -12,11 +12,12 @@ import {
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { upload } from '../controllers/uploadController';
+import { authRateLimit } from '../middleware/rateLimit';
 
 const router = Router();
 
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', authRateLimit, register);
+router.post('/login', authRateLimit, login);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);

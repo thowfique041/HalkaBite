@@ -51,7 +51,7 @@
       "destination": {
         "type": "service",
         "service": "frontend",
-        "path": "/index.html"
+        "path": "/"
       }
     }
   ]

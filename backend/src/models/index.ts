@@ -23,6 +23,7 @@ export { RestaurantStatusHistory, IRestaurantStatusHistoryDocument } from './Res
 export { RestaurantAnalytics, IRestaurantAnalyticsDocument } from './RestaurantAnalytics';
 export { AdminSetting, IAdminSettingDocument } from './AdminSetting';
 export { AuthSession, IAuthSessionDocument } from './AuthSession';
+export { SystemAuditLog, ISystemAuditLogDocument } from './SystemAuditLog';
 export { Payment, IPaymentDocument, PaymentMethod, ManualPaymentStatus } from './Payment';
 export { CommissionPayment, ICommissionPaymentDocument, CommissionPaymentMethod, CommissionPaymentStatus } from './CommissionPayment';
 export { DeliveryEarningSetting, IDeliveryEarningSettingDocument, DeliveryEarningMode } from './DeliveryEarningSetting';

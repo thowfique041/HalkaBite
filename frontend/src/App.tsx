@@ -49,6 +49,7 @@ import RestaurantDetailsPage from './pages/admin/RestaurantDetailsPage';
 import CommissionSettingsPage from './pages/admin/CommissionSettingsPage';
 import FeaturedFoodSyncInitializer from './components/food/FeaturedFoodSyncInitializer';
 import AdminSettingsInitializer from './components/admin/AdminSettingsInitializer';
+import SecurityAuditPage from './pages/admin/SecurityAuditPage';
 import PaymentVerificationPage from './pages/restaurant/PaymentVerificationPage';
 import FavoritesPage from './pages/FavoritesPage';
 
@@ -163,6 +164,7 @@ const App: React.FC = () => {
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="reviews" element={<AdminReviewsPage />} />
             <Route path="campaigns" element={<AdminCampaignsPage />} />
+            <Route path="security" element={<SecurityAuditPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="profile" element={<AdminProfilePage />} />
           </Route>

@@ -12,6 +12,7 @@ import {
     Percent,
     Settings,
     ShieldCheck,
+    ScrollText,
     ShoppingBag,
     Star,
     Store,
@@ -45,6 +46,7 @@ const navigationItems: NavigationItem[] = [
     { path: '/admin/orders', icon: ShoppingBag, label: 'Orders' },
     { path: '/admin/reviews', icon: MessageSquare, label: 'Reviews' },
     { path: '/admin/campaigns', icon: BadgePercent, label: 'Campaigns' },
+    { path: '/admin/security', icon: ScrollText, label: 'Security & Logs' },
 ];
 
 interface SidebarLinkProps extends NavigationItem {
@@ -82,7 +84,7 @@ interface AdminSidebarProps {
     language: 'en' | 'bn';
 }
 
-const banglaLabels:Record<string,string>={Dashboard:'ড্যাশবোর্ড',Users:'ব্যবহারকারী',Menu:'মেনু','Featured Food':'ফিচার্ড খাবার',Restaurants:'রেস্টুরেন্ট',Commissions:'কমিশন','Name Requests':'নাম পরিবর্তনের অনুরোধ','Delivery Management':'ডেলিভারি ব্যবস্থাপনা',Orders:'অর্ডার',Reviews:'রিভিউ',Campaigns:'ক্যাম্পেইন',Settings:'সেটিংস',Profile:'প্রোফাইল',Logout:'লগআউট'};
+const banglaLabels:Record<string,string>={Dashboard:'ড্যাশবোর্ড',Users:'ব্যবহারকারী',Menu:'মেনু','Featured Food':'ফিচার্ড খাবার',Restaurants:'রেস্টুরেন্ট',Commissions:'কমিশন','Name Requests':'নাম পরিবর্তনের অনুরোধ','Delivery Management':'ডেলিভারি ব্যবস্থাপনা',Orders:'অর্ডার',Reviews:'রিভিউ',Campaigns:'ক্যাম্পেইন','Security & Logs':'নিরাপত্তা ও লগ',Settings:'সেটিংস',Profile:'প্রোফাইল',Logout:'লগআউট'};
 const AdminSidebar = ({ collapsed, mobile, onClose, onToggleCollapse, language }: AdminSidebarProps) => {
     const dispatch = useAppDispatch();
     const user = useAppSelector(state => state.auth.user);

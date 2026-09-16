@@ -38,7 +38,7 @@ const createSession = async (userId: string, req: Request) => {
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, password, phone } = req.body;
 
@@ -64,6 +64,7 @@ export const register = async (req: Request, res: Response) => {
 
     const sessionId = await createSession(String(user._id), req);
     const token = generateToken(user, sessionId);
+    req.user = user;
 
     // Send welcome email (don't wait for it)
     sendWelcomeEmail(email, name).catch(console.error);
@@ -95,7 +96,7 @@ export const register = async (req: Request, res: Response) => {
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: AuthRequest, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -130,6 +131,7 @@ export const login = async (req: Request, res: Response) => {
 
     const sessionId = await createSession(String(user._id), req);
     const token = generateToken(user, sessionId);
+    req.user = user;
 
     // Set cookie
     res.cookie('token', token, {

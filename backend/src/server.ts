@@ -35,6 +35,7 @@ import { ensureRestaurantActivityIndexes } from './services/restaurantActivitySe
 import { backfillRestaurantIdentities } from './services/restaurantIdentityService';
 import { ensureFeaturedFoodIndex } from './services/featuredFoodService';
 import { activateDueCampaigns } from './services/campaignService';
+import { auditActivity } from './middleware/auditLog';
 
 // Load env vars
 dotenv.config();
@@ -83,6 +84,7 @@ app.use(async (_req, _res, next) => {
     next(error);
   }
 });
+app.use(auditActivity);
 app.use('/api', apiRateLimit);
 
 // Logging

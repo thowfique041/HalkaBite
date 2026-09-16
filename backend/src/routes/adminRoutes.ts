@@ -7,6 +7,7 @@ import { getAdminOrders } from '../controllers/adminOrderController';
 import { exportAdminSettings, getAdminSettings, updateAdminSettings } from '../controllers/adminSettingsController';
 import { getRestaurantCommission, getRestaurantCommissionAnalytics, getRestaurantCommissionOrders, getRestaurantCommissionPayments, getRestaurantCommissionSummary, recordRestaurantCommissionPayment } from '../controllers/adminRestaurantCommissionController';
 import { createDeliverySettlement, getDeliveryEarningSettings, getDeliveryEarnings, getDeliveryFinancialAnalytics, getDeliveryRestaurants, getDeliverySettlements, payDeliverySettlement, updateDeliveryEarningSettings } from '../controllers/adminDeliveryFinanceController';
+import { getActiveSessions, getAuditLogs, revokeActiveSession } from '../controllers/adminSecurityController';
 
 const router = Router();
 
@@ -44,5 +45,8 @@ router.post('/delivery-men/:id/settlements', createDeliverySettlement);
 router.post('/delivery-men/:id/pay', payDeliverySettlement);
 router.get('/delivery-earning-settings', getDeliveryEarningSettings);
 router.patch('/delivery-earning-settings', updateDeliveryEarningSettings);
+router.get('/security/sessions', getActiveSessions);
+router.delete('/security/sessions/:id', revokeActiveSession);
+router.get('/security/audit-logs', getAuditLogs);
 
 export default router;

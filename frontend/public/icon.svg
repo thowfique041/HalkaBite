@@ -1,6 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#f97316"/>
-  <circle cx="256" cy="256" r="172" fill="#111827"/>
-  <path fill="#fff" d="M145 222c10-62 52-99 111-99s101 37 111 99H145Zm-4 22h230v36H141v-36Zm20 58h190c-9 55-44 87-95 87s-86-32-95-87Z"/>
-  <circle cx="208" cy="179" r="10" fill="#f97316"/><circle cx="260" cy="160" r="10" fill="#f97316"/><circle cx="311" cy="183" r="10" fill="#f97316"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HalkaBite burger logo">
+  <rect width="512" height="512" rx="104" fill="#171524"/>
+  <g stroke="#8b4513" stroke-width="10" stroke-linejoin="round">
+    <path d="M112 209c7-78 65-126 144-126s137 48 144 126H112Z" fill="#f59e0b"/>
+    <path d="M122 326h268c-7 65-58 103-134 103s-127-38-134-103Z" fill="#f59e0b"/>
+    <rect x="105" y="286" width="302" height="56" rx="25" fill="#facc15"/>
+    <path d="m112 247 45-25 49 25 50-25 50 25 49-25 45 25-45 32-49-26-50 26-50-26-49 26Z" fill="#22c55e"/>
+    <path d="M126 264h260c-12 42-54 66-130 66s-118-24-130-66Z" fill="#ef4444"/>
+    <path d="M115 206h282c7 0 13 6 13 13v12c0 13-10 23-23 23H125c-13 0-23-10-23-23v-12c0-7 6-13 13-13Z" fill="#fbbf24"/>
+  </g>
+  <g fill="#fff7d6">
+    <ellipse cx="177" cy="142" rx="9" ry="5" transform="rotate(-20 177 142)"/>
+    <ellipse cx="229" cy="119" rx="9" ry="5" transform="rotate(15 229 119)"/>
+    <ellipse cx="282" cy="124" rx="9" ry="5" transform="rotate(-10 282 124)"/>
+    <ellipse cx="335" cy="151" rx="9" ry="5" transform="rotate(24 335 151)"/>
+    <ellipse cx="255" cy="166" rx="9" ry="5" transform="rotate(-18 255 166)"/>
+  </g>
 </svg>

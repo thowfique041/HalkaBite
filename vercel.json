@@ -40,6 +40,13 @@
       }
     },
     {
+      "source": "/icon.svg",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    },
+    {
       "source": "/sw.js",
       "destination": {
         "type": "service",

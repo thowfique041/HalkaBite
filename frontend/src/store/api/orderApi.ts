@@ -61,6 +61,10 @@ export const orderApi = apiSlice.injectEndpoints({
             }),
             invalidatesTags: ['Order'],
         }),
+        reorder: builder.mutation<ApiResponse, string>({
+            query: id => ({ url: `/orders/${id}/reorder`, method: 'POST' }),
+            invalidatesTags: ['Cart'],
+        }),
         getAdminOrders: builder.query<ApiResponse<AdminOrderData>, AdminOrderFilters>({
             query: params => ({url:'/admin/orders',params}),
             transformResponse: (response: ApiResponse<AdminOrderData>) => ({ ...response, data: response.data ? { ...response.data, orders: uniqueById(response.data.orders) } : response.data }),
@@ -75,6 +79,7 @@ export const {
     useCreateOrderMutation,
     useUpdateOrderStatusMutation,
     useCancelOrderMutation,
+    useReorderMutation,
     useGetAdminOrdersQuery,
     useLazyGetAdminOrdersQuery,
 } = orderApi;

@@ -50,6 +50,7 @@ import CommissionSettingsPage from './pages/admin/CommissionSettingsPage';
 import FeaturedFoodSyncInitializer from './components/food/FeaturedFoodSyncInitializer';
 import AdminSettingsInitializer from './components/admin/AdminSettingsInitializer';
 import PaymentVerificationPage from './pages/restaurant/PaymentVerificationPage';
+import FavoritesPage from './pages/FavoritesPage';
 
 const App: React.FC = () => {
   return (
@@ -113,6 +114,7 @@ const App: React.FC = () => {
                 <OrdersPage />
               </ProtectedRoute>
             } />
+            <Route path="favorites" element={<ProtectedRoute allowedRoles={['user']}><FavoritesPage /></ProtectedRoute>} />
             <Route path="messages" element={<ProtectedRoute allowedRoles={['user']}><MessagingPage /></ProtectedRoute>} />
             <Route path="notifications" element={<ProtectedRoute allowedRoles={['user']}><CustomerNotificationsPage /></ProtectedRoute>} />
           </Route>

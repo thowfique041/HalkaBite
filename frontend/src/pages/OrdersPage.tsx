@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, Clock, ChevronRight, Search, Filter, Star, MessageCircle } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useGetOrderQuery, useGetOrdersQuery } from '../store/api/orderApi';
+import { Package, Clock, ChevronRight, Search, Star, MessageCircle, RefreshCw } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useGetOrderQuery, useGetOrdersQuery, useReorderMutation } from '../store/api/orderApi';
 import type { Order } from '../types';
 import ReviewModal from '../components/reviews/ReviewModal';
 import DeliveryAuditTrail from '../components/orders/DeliveryAuditTrail';
@@ -10,6 +10,10 @@ import { toast } from 'react-hot-toast';
 
 const OrdersPage: React.FC = () => {
   const [reviewOrder, setReviewOrder] = useState<Order | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [reorder, { isLoading: isReordering }] = useReorderMutation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const focusedOrderId = searchParams.get('order');
   const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
@@ -34,6 +38,16 @@ const OrdersPage: React.FC = () => {
   const orders = useMemo(() => fetchedFocusedOrder && !loadedFocusedOrder
     ? [fetchedFocusedOrder, ...loadedOrders]
     : loadedOrders, [fetchedFocusedOrder, loadedFocusedOrder, loadedOrders]);
+  const visibleOrders = useMemo(() => orders.filter(order => {
+    const needle = search.trim().toLowerCase();
+    const matchesSearch = !needle || order.orderNumber.toLowerCase().includes(needle) || order.items.some(item => (item.name || '').toLowerCase().includes(needle));
+    return matchesSearch && (status === 'all' || order.orderStatus === status);
+  }), [orders, search, status]);
+
+  const handleReorder = async (id: string) => {
+    try { await reorder(id).unwrap(); toast.success('Order items added to your cart'); navigate('/checkout'); }
+    catch (error: any) { toast.error(error?.data?.message || 'Could not reorder these items'); }
+  };
 
   useEffect(() => {
     if (!focusedOrderId) return;
@@ -95,20 +109,20 @@ const OrdersPage: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search orders..."
+                value={search}
+                onChange={event => setSearch(event.target.value)}
                 className="bg-dark-100 border border-white/10 rounded-lg py-2 pl-9 pr-4 text-sm focus:outline-none focus:border-primary-500 w-full md:w-64"
               />
             </div>
-            <button className="p-2 bg-dark-100 border border-white/10 rounded-lg hover:bg-white/5 transition-colors">
-              <Filter className="w-5 h-5 text-white/60" />
-            </button>
+            <select aria-label="Filter orders by status" value={status} onChange={event => setStatus(event.target.value)} className="input py-2 text-sm"><option value="all">All statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="preparing">Preparing</option><option value="out_for_delivery">On the way</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select>
           </div>
         </motion.div>
 
         <div className="space-y-4">
-          {orders.length === 0 ? (
+          {visibleOrders.length === 0 ? (
             <div className="text-center py-12 text-white/60">No orders found.</div>
           ) : (
-            orders.map((order: Order, index: number) => (
+            visibleOrders.map((order: Order, index: number) => (
               <motion.div
                 key={order._id}
                 id={`customer-order-${order._id}`}
@@ -167,6 +181,7 @@ const OrdersPage: React.FC = () => {
                           <Star className="w-4 h-4 mr-1" /> Rate & Review
                         </button>
                       )}
+                      {['delivered','cancelled'].includes(order.orderStatus) && <button disabled={isReordering} onClick={() => handleReorder(order._id)} className="btn btn-outline px-4 py-2 text-sm"><RefreshCw className="w-4 h-4 mr-1" /> Reorder</button>}
                       <button className="btn btn-outline px-4 py-2 text-sm group-hover:bg-primary-500 group-hover:text-white group-hover:border-primary-500 transition-all">
                         Details <ChevronRight className="w-4 h-4 ml-1" />
                       </button>

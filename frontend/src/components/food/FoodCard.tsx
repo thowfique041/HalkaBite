@@ -1,9 +1,11 @@
 import React from 'react';
-import { Star, Clock, Plus, Flame, Leaf } from 'lucide-react';
+import { Star, Clock, Plus, Flame, Leaf, Heart } from 'lucide-react';
 import type { FoodItem } from '../../types';
 import FoodModal from './FoodModal';
 import { useTrackCampaignClickMutation } from '../../store/api/campaignApi';
 import { useAppSelector } from '../../store/hooks';
+import { useToggleFavoriteMutation } from '../../store/api/authApi';
+import toast from 'react-hot-toast';
 
 interface FoodCardProps {
   food: FoodItem;
@@ -12,6 +14,8 @@ interface FoodCardProps {
 const FoodCard: React.FC<FoodCardProps> = ({ food }) => {
   const [showModal, setShowModal] = React.useState(false);
   const [trackClick] = useTrackCampaignClickMutation(); const user = useAppSelector(state=>state.auth.user);
+  const [toggleFavorite, { isLoading: favoriteSaving }] = useToggleFavoriteMutation();
+  const isFavorite = Boolean(user?.favoriteItems?.includes(food._id));
   const [remaining, setRemaining] = React.useState(() => food.promotion ? Math.max(0, new Date(food.promotion.endAt).getTime() - Date.now()) : 0);
   React.useEffect(() => { if (!food.promotion) return; const timer=setInterval(()=>setRemaining(Math.max(0,new Date(food.promotion!.endAt).getTime()-Date.now())),1000); return()=>clearInterval(timer); },[food.promotion]);
   const campaignActive = Boolean(food.promotion && remaining > 0);
@@ -33,6 +37,13 @@ const FoodCard: React.FC<FoodCardProps> = ({ food }) => {
             alt={food.name}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
+          {user?.role === 'user' && <button
+            type="button"
+            disabled={favoriteSaving}
+            aria-label={isFavorite ? `Remove ${food.name} from favourites` : `Add ${food.name} to favourites`}
+            onClick={async event => { event.stopPropagation(); try { const result = await toggleFavorite(food._id).unwrap(); toast.success(result.message); } catch { toast.error('Could not update favourites'); } }}
+            className={`absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-full border backdrop-blur transition ${isFavorite ? 'border-red-400/50 bg-red-500 text-white' : 'border-white/20 bg-black/45 text-white hover:bg-red-500'}`}
+          ><Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} /></button>}
 
           {/* Discount Badge */}
           {(campaignActive || food.discount) && (

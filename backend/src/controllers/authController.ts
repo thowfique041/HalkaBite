@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuthSession, User } from '../models';
+import { AuthSession, FoodItem, User } from '../models';
 import { generateToken } from '../utils/jwt';
 import { sendWelcomeEmail } from '../utils/email';
 import { AuthRequest } from '../middleware/auth';
@@ -223,6 +223,42 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       success: false,
       message: error.message || 'Server error'
     });
+  }
+};
+
+export const getFavorites = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = await User.findById(req.user._id).select('favoriteItems').populate({
+      path: 'favoriteItems',
+      match: { isDeleted: { $ne: true } },
+      populate: [
+        { path: 'category', select: 'name slug' },
+        { path: 'restaurant', select: 'name deliveryTime deliveryFee' }
+      ]
+    });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    return res.json({ success: true, data: user.favoriteItems });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
+export const toggleFavorite = async (req: AuthRequest, res: Response) => {
+  try {
+    const food = await FoodItem.findOne({ _id: req.params.foodId, isDeleted: { $ne: true } }).select('_id');
+    if (!food) return res.status(404).json({ success: false, message: 'Food item not found' });
+    const current = await User.findById(req.user._id).select('favoriteItems');
+    if (!current) return res.status(404).json({ success: false, message: 'User not found' });
+    const foodId = food._id.toString();
+    const isFavorite = current.favoriteItems.some(id => id.toString() === foodId);
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      isFavorite ? { $pull: { favoriteItems: food._id } } : { $addToSet: { favoriteItems: food._id } },
+      { new: true }
+    );
+    return res.json({ success: true, message: isFavorite ? 'Removed from favourites' : 'Added to favourites', data: { favoriteItems: user?.favoriteItems || [], isFavorite: !isFavorite } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 

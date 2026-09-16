@@ -8,6 +8,7 @@ import {
   updatePassword,
   uploadProfileAvatar,
   removeProfileAvatar
+  ,getFavorites,toggleFavorite
   ,getSessions,revokeSession,revokeOtherSessions,revokeAllSessions
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
@@ -20,6 +21,8 @@ router.post('/register', authRateLimit, register);
 router.post('/login', authRateLimit, login);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
+router.get('/favorites', protect, getFavorites);
+router.post('/favorites/:foodId', protect, toggleFavorite);
 router.put('/profile', protect, updateProfile);
 router.post('/profile/avatar', protect, upload.single('avatar'), uploadProfileAvatar);
 router.delete('/profile/avatar', protect, removeProfileAvatar);

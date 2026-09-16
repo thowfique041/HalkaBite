@@ -131,6 +131,7 @@ const Navbar: React.FC = () => {
                 <div className="absolute right-0 mt-2 w-48 py-2 card opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <Link to={user?.role === 'admin' ? '/admin/profile' : '/profile'} className="block px-4 py-2 hover:bg-white/10">Profile</Link>
                   <Link to="/orders" className="block px-4 py-2 hover:bg-white/10">My Orders</Link>
+                  {user?.role === 'user' && <Link to="/favorites" className="block px-4 py-2 hover:bg-white/10">My Favourites</Link>}
                   {user?.role === 'admin' && (
                     <Link to="/admin" className="block px-4 py-2 hover:bg-white/10">Admin Dashboard</Link>
                   )}
@@ -182,6 +183,7 @@ const Navbar: React.FC = () => {
             <Link to="/menu" className="block py-2 hover:text-primary-400">Menu</Link>
             <Link to="/restaurants" className="block py-2 hover:text-primary-400">Restaurants</Link>
             <Link to="/orders" className="block py-2 hover:text-primary-400">Orders</Link>
+            {user?.role === 'user' && <Link to="/favorites" className="block py-2 hover:text-primary-400">Favourites</Link>}
             <div className="flex space-x-4 pt-4">
               <button
                 onClick={() => dispatch(toggleVoiceModal())}

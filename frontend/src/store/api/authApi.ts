@@ -1,5 +1,5 @@
 import { apiSlice } from './apiSlice';
-import type { User, ApiResponse } from '../../types';
+import type { User, FoodItem, ApiResponse } from '../../types';
 import { setUser } from '../slices/authSlice';
 
 interface LoginRequest {
@@ -56,6 +56,20 @@ export const authApi = apiSlice.injectEndpoints({
         try { const { data } = await queryFulfilled; if (data.data) dispatch(setUser(data.data)); } catch { /* rendered by the caller */ }
       },
     }),
+    getFavorites: builder.query<ApiResponse<FoodItem[]>, void>({
+      query: () => '/auth/favorites',
+      providesTags: ['User'],
+    }),
+    toggleFavorite: builder.mutation<ApiResponse<{ favoriteItems: string[]; isFavorite: boolean }>, string>({
+      query: foodId => ({ url: `/auth/favorites/${foodId}`, method: 'POST' }),
+      invalidatesTags: ['User'],
+      async onQueryStarted(_foodId, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(setUser({ ...(await dispatch(authApi.endpoints.getMe.initiate(undefined, { forceRefetch: true })).unwrap()).data!, favoriteItems: data.data?.favoriteItems || [] }));
+        } catch { /* rendered by the caller */ }
+      },
+    }),
     uploadProfileAvatar: builder.mutation<ApiResponse<User>, FormData>({
       query: body => ({ url: '/auth/profile/avatar', method: 'POST', body }),
       invalidatesTags: ['User'],
@@ -85,6 +99,8 @@ export const {
   useRegisterMutation,
   useLogoutMutation,
   useGetMeQuery,
+  useGetFavoritesQuery,
+  useToggleFavoriteMutation,
   useUpdateProfileMutation,
   useUploadProfileAvatarMutation,
   useRemoveProfileAvatarMutation,

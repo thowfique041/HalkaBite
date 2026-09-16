@@ -12,6 +12,8 @@ const MenuPage: React.FC = () => {
     search: '',
     isVegetarian: false,
     isSpicy: false,
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
     sort: '',
     page: 1,
     limit: 12,
@@ -68,6 +70,8 @@ const MenuPage: React.FC = () => {
       search: '',
       isVegetarian: false,
       isSpicy: false,
+      minPrice: undefined,
+      maxPrice: undefined,
       sort: '',
       page: 1,
       limit: 12,
@@ -185,6 +189,18 @@ const MenuPage: React.FC = () => {
                 </div>
               </div>
 
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-white/60 mb-3">Price range</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-xs text-white/45">Minimum
+                    <input aria-label="Minimum price" type="number" min="0" placeholder="৳0" value={filters.minPrice ?? ''} onChange={e => setFilters({ ...filters, page: 1, minPrice: e.target.value ? Number(e.target.value) : undefined })} className="input mt-1 w-full px-3 py-2" />
+                  </label>
+                  <label className="text-xs text-white/45">Maximum
+                    <input aria-label="Maximum price" type="number" min="0" placeholder="Any" value={filters.maxPrice ?? ''} onChange={e => setFilters({ ...filters, page: 1, maxPrice: e.target.value ? Number(e.target.value) : undefined })} className="input mt-1 w-full px-3 py-2" />
+                  </label>
+                </div>
+              </div>
+
               {/* Apply Button (Mobile) */}
               <button
                 onClick={() => setShowFilters(false)}
@@ -220,6 +236,7 @@ const MenuPage: React.FC = () => {
                   Browse All Foods
                 </button>
               </div>
+
             ) : (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

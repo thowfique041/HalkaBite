@@ -31,6 +31,7 @@ import {
 import featuredFoodRoutes from './routes/featuredFoodRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import { apiRateLimit } from './middleware/rateLimit';
+import { ensureRestaurantActivityIndexes } from './services/restaurantActivityService';
 
 // Load env vars
 dotenv.config();
@@ -107,6 +108,7 @@ const PORT = process.env.PORT || 5000;
 import { activateDueCampaigns } from './services/campaignService';
 export const startServer = async () => {
   await connectDB();
+  await ensureRestaurantActivityIndexes();
   await backfillRestaurantIdentities();
   await ensureFeaturedFoodIndex();
   await activateDueCampaigns();

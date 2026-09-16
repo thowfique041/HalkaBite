@@ -78,7 +78,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       cart = await Cart.create({
         user: req.user._id,
         items: [],
-        restaurant: foodItem.restaurant
+        restaurant: foodItem.restaurant._id
       });
     }
 

@@ -6,17 +6,16 @@ interface EmailOptions {
   html: string;
 }
 
-const transporter = nodemailer.createTransport({
+const emailConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+const transporter = emailConfigured ? nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+  secure: process.env.SMTP_PORT === '465',
+  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+}) : null;
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
+  if (!transporter) return;
   const mailOptions = {
     from: `HalkaBite <${process.env.SMTP_USER}>`,
     to: options.to,

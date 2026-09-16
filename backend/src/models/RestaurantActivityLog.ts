@@ -6,6 +6,10 @@ const schema = new Schema<IRestaurantActivityLogDocument>({
   occurredAt: { type: Date, default: Date.now, required: true }, dedupeKey: String
 }, { timestamps: true });
 schema.index({ restaurant: 1, occurredAt: -1 });
-schema.index({ restaurant: 1, dedupeKey: 1 }, { unique: true, sparse: true });
+// Sparse indexes still index an explicitly stored null. Restrict the unique
+// constraint to real string keys so ordinary activity rows can coexist.
+schema.index(
+  { restaurant: 1, dedupeKey: 1 },
+  { unique: true, partialFilterExpression: { dedupeKey: { $type: 'string' } } }
+);
 export const RestaurantActivityLog = mongoose.model<IRestaurantActivityLogDocument>('RestaurantActivityLog', schema);
-

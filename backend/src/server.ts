@@ -32,25 +32,57 @@ import featuredFoodRoutes from './routes/featuredFoodRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import { apiRateLimit } from './middleware/rateLimit';
 import { ensureRestaurantActivityIndexes } from './services/restaurantActivityService';
+import { backfillRestaurantIdentities } from './services/restaurantIdentityService';
+import { ensureFeaturedFoodIndex } from './services/featuredFoodService';
+import { activateDueCampaigns } from './services/campaignService';
 
 // Load env vars
 dotenv.config();
 
-// Connect to database and assign permanent IDs to legacy restaurant records.
-import { backfillRestaurantIdentities } from './services/restaurantIdentityService';
-import { ensureFeaturedFoodIndex } from './services/featuredFoodService';
-
 const app = express();
+
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+
+let initializationPromise: Promise<void> | undefined;
+const initializeApplication = () => {
+  if (!initializationPromise) {
+    initializationPromise = (async () => {
+      await connectDB();
+      await ensureRestaurantActivityIndexes();
+      await backfillRestaurantIdentities();
+      await ensureFeaturedFoodIndex();
+      await activateDueCampaigns();
+    })().catch(error => {
+      initializationPromise = undefined;
+      throw error;
+    });
+  }
+  return initializationPromise;
+};
 
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin is not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb', parameterLimit: 100 }));
 app.use(cookieParser());
+app.use(async (_req, _res, next) => {
+  try {
+    await initializeApplication();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 app.use('/api', apiRateLimit);
 
 // Logging
@@ -105,13 +137,8 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-import { activateDueCampaigns } from './services/campaignService';
 export const startServer = async () => {
-  await connectDB();
-  await ensureRestaurantActivityIndexes();
-  await backfillRestaurantIdentities();
-  await ensureFeaturedFoodIndex();
-  await activateDueCampaigns();
+  await initializeApplication();
   setInterval(() => activateDueCampaigns().catch(console.error), 60000).unref();
   return app.listen(PORT, () => {
     console.log(`

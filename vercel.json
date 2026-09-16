@@ -6,7 +6,10 @@
       "framework": "vite"
     },
     "backend": {
-      "root": "backend"
+      "root": "backend",
+      "entrypoint": "src/server.ts",
+      "framework": "express",
+      "maxDuration": 60
     }
   },
   "rewrites": [

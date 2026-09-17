@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuthSession, FoodItem, User } from '../models';
+import { AuthSession, FoodItem, User, type IUserDocument } from '../models';
 import { generateToken } from '../utils/jwt';
 import { sendWelcomeEmail } from '../utils/email';
 import { AuthRequest } from '../middleware/auth';
@@ -34,6 +34,40 @@ const createSession = async (userId: string, req: Request) => {
   const tokenId = crypto.randomUUID();
   await AuthSession.create({ user:userId, tokenId, ...clientInfo(req), expiresAt:new Date(Date.now()+7*24*60*60*1000) });
   return tokenId;
+};
+const setAuthCookie = (res: Response, token: string) => res.cookie('token', token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+});
+const authenticateGoogleCredential = async (credential: string, req: Request): Promise<{ user: IUserDocument; token: string }> => {
+  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+  if (!clientId) throw new Error('GOOGLE_NOT_CONFIGURED');
+  if (!credential) throw new Error('GOOGLE_CREDENTIAL_REQUIRED');
+  const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken: credential, audience: clientId });
+  const payload = ticket.getPayload();
+  if (!payload?.email || !payload.email_verified || !payload.sub) throw new Error('GOOGLE_NOT_VERIFIED');
+
+  let user = await User.findOne({ email: payload.email.toLowerCase() });
+  if (!user) {
+    user = await User.create({
+      name: payload.name?.trim() || payload.email.split('@')[0],
+      email: payload.email.toLowerCase(),
+      password: crypto.randomBytes(32).toString('hex'),
+      avatar: payload.picture,
+      isVerified: true
+    });
+    sendWelcomeEmail(user.email, user.name).catch(console.error);
+  } else if (!user.isVerified || (!user.avatar && payload.picture)) {
+    user = await User.findByIdAndUpdate(user._id, {
+      $set: { isVerified: true, ...(!user.avatar && payload.picture ? { avatar: payload.picture } : {}) }
+    }, { new: true }) || user;
+  }
+  user.lastLogin = new Date();
+  await User.updateOne({ _id: user._id }, { $set: { lastLogin: user.lastLogin } });
+  const sessionId = await createSession(String(user._id), req);
+  return { user, token: generateToken(user, sessionId) };
 };
 
 // @desc    Register user
@@ -234,48 +268,35 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 // @access  Public
 export const googleLogin = async (req: AuthRequest, res: Response) => {
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
-    if (!clientId) return res.status(503).json({ success: false, message: 'Google sign-in is not configured yet' });
     const credential = typeof req.body?.credential === 'string' ? req.body.credential : '';
-    if (!credential) return res.status(400).json({ success: false, message: 'Google credential is required' });
-
-    const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken: credential, audience: clientId });
-    const payload = ticket.getPayload();
-    if (!payload?.email || !payload.email_verified || !payload.sub) {
-      return res.status(401).json({ success: false, message: 'Google account could not be verified' });
-    }
-
-    let user = await User.findOne({ email: payload.email.toLowerCase() });
-    if (!user) {
-      user = await User.create({
-        name: payload.name?.trim() || payload.email.split('@')[0],
-        email: payload.email.toLowerCase(),
-        password: crypto.randomBytes(32).toString('hex'),
-        avatar: payload.picture,
-        isVerified: true
-      });
-      sendWelcomeEmail(user.email, user.name).catch(console.error);
-    } else if (!user.isVerified || (!user.avatar && payload.picture)) {
-      user = await User.findByIdAndUpdate(user._id, {
-        $set: { isVerified: true, ...(!user.avatar && payload.picture ? { avatar: payload.picture } : {}) }
-      }, { new: true }) || user;
-    }
-
-    user.lastLogin = new Date();
-    await User.updateOne({ _id: user._id }, { $set: { lastLogin: user.lastLogin } });
-    const sessionId = await createSession(String(user._id), req);
-    const token = generateToken(user, sessionId);
+    const { user, token } = await authenticateGoogleCredential(credential, req);
     req.user = user;
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    setAuthCookie(res, token);
     return res.json({ success: true, message: 'Signed in with Google', data: { user: safeUser(user), token } });
   } catch (error) {
+    if (error instanceof Error && error.message === 'GOOGLE_NOT_CONFIGURED') return res.status(503).json({ success: false, message: 'Google sign-in is not configured yet' });
+    if (error instanceof Error && error.message === 'GOOGLE_CREDENTIAL_REQUIRED') return res.status(400).json({ success: false, message: 'Google credential is required' });
     console.error('Google sign-in failed:', error);
     return res.status(401).json({ success: false, message: 'Google sign-in failed. Please try again.' });
+  }
+};
+
+// Google redirect mode works in browsers that block popup/FedCM windows.
+export const googleRedirectLogin = async (req: AuthRequest, res: Response) => {
+  try {
+    const csrfBody = typeof req.body?.g_csrf_token === 'string' ? req.body.g_csrf_token : '';
+    const csrfCookie = typeof req.cookies?.g_csrf_token === 'string' ? req.cookies.g_csrf_token : '';
+    if (!csrfBody || !csrfCookie || csrfBody !== csrfCookie) return res.status(400).send('Invalid Google sign-in request');
+    const credential = typeof req.body?.credential === 'string' ? req.body.credential : '';
+    const { user, token } = await authenticateGoogleCredential(credential, req);
+    req.user = user;
+    setAuthCookie(res, token);
+    const serializedToken = JSON.stringify(token).replace(/</g, '\\u003c');
+    res.set({ 'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'", 'Referrer-Policy': 'no-referrer', 'Cache-Control': 'no-store' });
+    return res.type('html').send(`<!doctype html><meta charset="utf-8"><title>Signing in…</title><script>localStorage.setItem('token',${serializedToken});location.replace('/');</script>`);
+  } catch (error) {
+    console.error('Google redirect sign-in failed:', error);
+    return res.status(401).type('html').send('<!doctype html><meta charset="utf-8"><title>Google sign-in failed</title><p>Google sign-in failed. <a href="/login">Return to login</a>.</p>');
   }
 };
 

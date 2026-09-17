@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
-import { useGoogleLoginMutation, useLoginMutation, useRegisterMutation } from '../store/api/authApi';
+import { useLoginMutation, useRegisterMutation } from '../store/api/authApi';
 import { setCredentials } from '../store/slices/authSlice';
 import { useAppDispatch } from '../store/hooks';
 import toast from 'react-hot-toast';
@@ -16,7 +16,7 @@ declare global {
     google?: {
       accounts: {
         id: {
-          initialize: (config: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+          initialize: (config: { client_id: string; callback?: (response: { credential: string }) => void; ux_mode?: 'popup' | 'redirect'; login_uri?: string }) => void;
           renderButton: (element: HTMLElement, options: Record<string, string | number>) => void;
         };
       };
@@ -31,7 +31,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
   const dispatch = useAppDispatch();
   const [login, { isLoading: isLoginLoading }] = useLoginMutation();
   const [register, { isLoading: isRegisterLoading }] = useRegisterMutation();
-  const [googleLogin, { isLoading: isGoogleLoading }] = useGoogleLoginMutation();
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -62,17 +61,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
       if (cancelled || !window.google || !googleButtonRef.current) return;
       window.google.accounts.id.initialize({
         client_id: googleClientId,
-        callback: async ({ credential }) => {
-          try {
-            const response = await googleLogin({ credential }).unwrap();
-            if (response.data) finishLogin(response.data.user, response.data.token, response.message);
-          } catch (error: unknown) {
-            const message = typeof error === 'object' && error !== null && 'data' in error
-              ? (error as { data?: { message?: string } }).data?.message
-              : undefined;
-            toast.error(message || 'Google sign-in failed');
-          }
-        }
+        ux_mode: 'redirect',
+        login_uri: `${window.location.origin}/api/auth/google/redirect`
       });
       googleButtonRef.current.innerHTML = '';
       window.google.accounts.id.renderButton(googleButtonRef.current, {
@@ -93,7 +83,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
       script.addEventListener('load', renderGoogleButton, { once: true });
     }
     return () => { cancelled = true; };
-  }, [finishLogin, googleLogin]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,7 +116,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
     }
   };
 
-  const isLoading = isLoginLoading || isRegisterLoading || isGoogleLoading;
+  const isLoading = isLoginLoading || isRegisterLoading;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-20">
@@ -237,7 +227,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
 
           {/* Social Login */}
           {googleClientId ? (
-            <div ref={googleButtonRef} className={`flex min-h-11 w-full justify-center ${isGoogleLoading ? 'pointer-events-none opacity-60' : ''}`} aria-label="Continue with Google" />
+            <div ref={googleButtonRef} className="flex min-h-11 w-full justify-center" aria-label="Continue with Google" />
           ) : (
             <button type="button" onClick={() => toast.error('Google sign-in needs an OAuth Client ID')} className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 px-4 py-3 transition-colors hover:bg-white/5">
               <img src="https://www.google.com/favicon.ico" alt="Google" className="h-5 w-5" />

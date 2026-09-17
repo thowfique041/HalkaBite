@@ -52,6 +52,7 @@ import AdminSettingsInitializer from './components/admin/AdminSettingsInitialize
 import SecurityAuditPage from './pages/admin/SecurityAuditPage';
 import PaymentVerificationPage from './pages/restaurant/PaymentVerificationPage';
 import FavoritesPage from './pages/FavoritesPage';
+import LegalPage from './pages/LegalPage';
 
 const App: React.FC = () => {
   return (
@@ -93,6 +94,8 @@ const App: React.FC = () => {
             <Route path="menu" element={<MenuPage />} />
             <Route path="food/:id" element={<FoodDetailsPage />} />
             <Route path="restaurants" element={<RestaurantsPage />} />
+            <Route path="privacy" element={<LegalPage kind="privacy" />} />
+            <Route path="terms" element={<LegalPage kind="terms" />} />
             <Route path="login" element={<AuthPage mode="login" />} />
             <Route path="register" element={<AuthPage mode="register" />} />
             <Route path="profile" element={

@@ -20,8 +20,10 @@ const FoodCard: React.FC<FoodCardProps> = ({ food }) => {
   React.useEffect(() => { if (!food.promotion) return; const timer=setInterval(()=>setRemaining(Math.max(0,new Date(food.promotion!.endAt).getTime()-Date.now())),1000); return()=>clearInterval(timer); },[food.promotion]);
   const campaignActive = Boolean(food.promotion && remaining > 0);
 
-  const discountedPrice = campaignActive ? food.promotion!.discountedPrice : food.discount
-    ? food.price * (1 - food.discount / 100)
+  const itemDiscount = typeof food.discount === 'number' ? food.discount : 0;
+  const hasItemDiscount = itemDiscount > 0;
+  const discountedPrice = campaignActive ? food.promotion!.discountedPrice : hasItemDiscount
+    ? food.price * (1 - itemDiscount / 100)
     : food.price;
 
   return (
@@ -46,9 +48,9 @@ const FoodCard: React.FC<FoodCardProps> = ({ food }) => {
           ><Heart className={`h-5 w-5 ${isFavorite ? 'fill-current' : ''}`} /></button>}
 
           {/* Discount Badge */}
-          {(campaignActive || food.discount) && (
+          {(campaignActive || hasItemDiscount) && (
             <div className="absolute top-3 left-3 bg-gradient-to-r from-red-600 via-primary-500 to-pink-500 text-white px-3 py-1.5 rounded-r-xl text-xs font-extrabold shadow-lg shadow-red-500/40 animate-pulse-slow">
-              🔥 {campaignActive ? `${Math.round(food.promotion!.percentageSaved)}% OFF` : `${food.discount}% OFF`}
+              🔥 {campaignActive ? `${Math.round(food.promotion!.percentageSaved)}% OFF` : `${itemDiscount}% OFF`}
             </div>
           )}
 
@@ -106,7 +108,7 @@ const FoodCard: React.FC<FoodCardProps> = ({ food }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-primary-400">৳{Math.round(discountedPrice)}</span>
-              {(campaignActive || food.discount) && (
+              {(campaignActive || hasItemDiscount) && (
                 <span className="text-sm text-white/40 line-through">৳{food.price}</span>
               )}
             </div>

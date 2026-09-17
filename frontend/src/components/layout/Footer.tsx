@@ -1,13 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Facebook, 
-  Twitter, 
-  Instagram, 
-  Mail, 
-  Phone, 
-  MapPin 
-} from 'lucide-react';
+import { Mail, MapPin } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -23,17 +16,7 @@ const Footer: React.FC = () => {
             <p className="text-white/60 mb-4">
               AI-powered food delivery platform. Order your favorite meals with voice commands and smart recommendations.
             </p>
-            <div className="flex space-x-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary-500 transition-colors">
-                <Facebook className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary-500 transition-colors">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-primary-500 transition-colors">
-                <Instagram className="w-5 h-5" />
-              </a>
-            </div>
+            <a href="mailto:support@halkabite.com" className="inline-flex items-center gap-2 text-primary-400 hover:underline"><Mail className="h-4 w-4" />Contact support</a>
           </div>
 
           {/* Quick Links */}
@@ -50,10 +33,10 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-white/60 hover:text-primary-400 transition-colors">Help Center</a></li>
-              <li><a href="#" className="text-white/60 hover:text-primary-400 transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-white/60 hover:text-primary-400 transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="text-white/60 hover:text-primary-400 transition-colors">Partner with Us</a></li>
+              <li><a href="mailto:support@halkabite.com?subject=HalkaBite%20Help" className="text-white/60 hover:text-primary-400 transition-colors">Help Center</a></li>
+              <li><Link to="/privacy" className="text-white/60 hover:text-primary-400 transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="text-white/60 hover:text-primary-400 transition-colors">Terms of Service</Link></li>
+              <li><a href="mailto:support@halkabite.com?subject=Restaurant%20Partnership" className="text-white/60 hover:text-primary-400 transition-colors">Partner with Us</a></li>
             </ul>
           </div>
 
@@ -66,12 +49,8 @@ const Footer: React.FC = () => {
                 <span>Sylhet, Bangladesh</span>
               </li>
               <li className="flex items-center space-x-3 text-white/60">
-                <Phone className="w-5 h-5 text-primary-400" />
-                <span>+880 1XXX-XXXXXX</span>
-              </li>
-              <li className="flex items-center space-x-3 text-white/60">
                 <Mail className="w-5 h-5 text-primary-400" />
-                <span>support@halkabite.com</span>
+                <a href="mailto:support@halkabite.com" className="hover:text-primary-400">support@halkabite.com</a>
               </li>
             </ul>
           </div>
@@ -81,7 +60,7 @@ const Footer: React.FC = () => {
         <div className="mt-12 pt-8 border-t border-white/10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-white/40 text-sm">
-              © 2025 HalkaBite. All rights reserved.
+              © {new Date().getFullYear()} HalkaBite. All rights reserved.
             </p>
             <div className="flex items-center space-x-4">
               <span className="text-white/40 text-sm">Payment Methods:</span>

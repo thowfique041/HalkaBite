@@ -47,13 +47,13 @@ const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+      <section className="relative flex min-h-[calc(100svh-4rem)] items-center overflow-hidden lg:min-h-[90vh]">
         {/* Background */}
         <div className="absolute inset-0 gradient-bg" />
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1920')] bg-cover bg-center opacity-10" />
         
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+          <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
             {/* Content */}
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/20 border border-primary-500/30 text-primary-400 text-sm mb-6">
@@ -61,12 +61,12 @@ const HomePage: React.FC = () => {
                 AI-Powered Food Delivery
               </div>
               
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
+              <h1 className="mb-5 text-4xl font-bold leading-[1.08] min-[380px]:text-5xl md:text-6xl lg:mb-6 lg:text-7xl">
                 Order Food with
                 <span className="gradient-text block">Your Voice</span>
               </h1>
               
-              <p className="text-xl text-white/60 mb-8 max-w-xl">
+              <p className="mx-auto mb-7 max-w-xl text-base leading-7 text-white/60 sm:text-lg lg:mx-0 lg:mb-8 lg:text-xl">
                 Experience the future of food ordering. Simply speak your order, and our AI will handle the rest. Fast, easy, and delicious!
               </p>
               
@@ -80,17 +80,17 @@ const HomePage: React.FC = () => {
               </div>
               
               {/* Stats */}
-              <div className="flex gap-8 mt-12 justify-center lg:justify-start">
+              <div className="mt-9 grid grid-cols-3 gap-3 text-center sm:mt-12 sm:gap-8 lg:text-left">
                 <div>
-                  <div className="text-3xl font-bold text-primary-400">500+</div>
+                  <div className="text-2xl font-bold text-primary-400 sm:text-3xl">500+</div>
                   <div className="text-white/60 text-sm">Restaurants</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-primary-400">50K+</div>
+                  <div className="text-2xl font-bold text-primary-400 sm:text-3xl">50K+</div>
                   <div className="text-white/60 text-sm">Happy Customers</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-primary-400">4.8</div>
+                  <div className="text-2xl font-bold text-primary-400 sm:text-3xl">4.8</div>
                   <div className="text-white/60 text-sm flex items-center gap-1">
                     <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /> Rating
                   </div>
@@ -107,7 +107,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Categories Section */}
-      <section className="py-20 px-4">
+      <section className="px-4 py-12 sm:py-20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Browse by Category</h2>
@@ -122,7 +122,7 @@ const HomePage: React.FC = () => {
                 key={category.name}
                 to={`/menu?category=${category.name.toLowerCase()}`}
                 aria-label={`Browse ${category.name} foods`}
-                className="card group cursor-pointer border border-transparent p-6 text-center transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:border-primary-400/70 hover:shadow-xl hover:shadow-primary-500/20 focus-visible:-translate-y-1 focus-visible:border-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
+                className="card group cursor-pointer border border-transparent p-4 text-center transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:border-primary-400/70 hover:shadow-xl hover:shadow-primary-500/20 focus-visible:-translate-y-1 focus-visible:border-primary-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 sm:p-6"
               >
                 <div className={`w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-r ${category.color} flex items-center justify-center text-3xl group-hover:scale-110 transition-transform`}>
                   {category.emoji}
@@ -135,7 +135,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-dark-200">
+      <section className="bg-dark-200 px-4 py-12 sm:py-20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose HalkaBite?</h2>
@@ -159,9 +159,9 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4">
+      <section className="px-4 py-12 sm:py-20">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="card p-12 gradient-bg border-primary-500/30">
+          <div className="card border-primary-500/30 p-6 gradient-bg sm:p-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Order?</h2>
             <p className="text-white/60 mb-8 max-w-xl mx-auto">
               Join thousands of satisfied customers who enjoy the convenience of AI-powered food ordering

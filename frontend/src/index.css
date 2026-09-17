@@ -67,12 +67,17 @@
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   body {
     font-family: 'Inter', system-ui, sans-serif;
     @apply bg-dark-300 text-white antialiased;
+    min-width: 320px;
+    overflow-x: hidden;
   }
+
+  img, video, canvas, svg { max-width: 100%; }
 
   ::-webkit-scrollbar {
     width: 8px;
@@ -89,6 +94,22 @@
 
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-primary-500;
+  }
+}
+
+@media (max-width: 639px) {
+  .btn {
+    min-height: 44px;
+    padding-inline: 1rem;
+    padding-block: .625rem;
+  }
+
+  .btn:hover { transform: none; }
+  .card { border-radius: 1rem; }
+  .input, input, textarea, select { font-size: 16px; }
+  .overflow-x-auto, .overflow-auto {
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

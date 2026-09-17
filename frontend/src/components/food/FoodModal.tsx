@@ -52,9 +52,9 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-dark-200 w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-200">
-                <div className="relative h-64">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+            <div className="max-h-[96dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-white/10 bg-dark-200 shadow-2xl animate-in fade-in zoom-in duration-200 sm:max-h-[92vh] sm:rounded-2xl">
+                <div className="relative h-48 sm:h-64">
                     <img
                         src={food.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}
                         alt={food.name}
@@ -73,10 +73,10 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
                     )}
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="space-y-5 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:space-y-6 sm:p-6">
                     <div>
-                        <div className="flex justify-between items-start mb-2">
-                            <h2 className="text-2xl font-bold">{food.name}</h2>
+                        <div className="mb-2 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between">
+                            <h2 className="text-xl font-bold sm:text-2xl">{food.name}</h2>
                             <div className="text-right">
                                 <p className="text-2xl font-bold text-primary-400">৳{Math.round(discountedPrice)}</p>
                                 {food.discount && (
@@ -104,7 +104,7 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
                         />
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                    <div className="flex flex-col gap-3 border-t border-white/10 pt-4 min-[440px]:flex-row min-[440px]:items-center min-[440px]:justify-between">
                         <div className="flex items-center gap-4 bg-white/5 rounded-xl p-1">
                             <button
                                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -126,7 +126,7 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
                             ref={addButtonRef}
                             onClick={handleAddToCart}
                             disabled={isLoading}
-                            className={`btn btn-primary relative overflow-visible flex items-center gap-2 px-8 py-3 ${isAdded ? 'add-to-cart-success' : ''}`}
+                            className={`btn btn-primary relative flex w-full items-center gap-2 overflow-visible px-5 py-3 min-[440px]:w-auto sm:px-8 ${isAdded ? 'add-to-cart-success' : ''}`}
                         >
                             {isLoading ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

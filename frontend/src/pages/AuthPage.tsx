@@ -122,7 +122,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ mode }) => {
     <div className="min-h-screen flex items-center justify-center px-4 py-20">
       <div className="w-full max-w-md">
         {/* Card */}
-        <div className="card p-8">
+        <div className="card p-5 sm:p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center space-x-2 mb-6">

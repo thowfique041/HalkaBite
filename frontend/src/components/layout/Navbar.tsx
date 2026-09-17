@@ -69,9 +69,9 @@ const Navbar: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="text-3xl">🍔</span>
-            <span className="text-2xl font-bold gradient-text">HalkaBite</span>
+          <Link to="/" className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+            <span className="text-2xl sm:text-3xl">🍔</span>
+            <span className="hidden text-xl font-bold gradient-text min-[370px]:inline sm:text-2xl">HalkaBite</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -93,9 +93,9 @@ const Navbar: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {user?.role === 'user' && <CustomerIconLink to="/notifications" label="Notifications" count={unreadOrderNotifications} icon={Bell} compact />}
-            {user?.role === 'user' && <CustomerIconLink to="/messages" label="Messages" count={unreadChats} icon={MessageCircle} compact />}
+          <div className="flex items-center gap-1 sm:gap-3">
+            {user?.role === 'user' && <span className="hidden sm:block"><CustomerIconLink to="/notifications" label="Notifications" count={unreadOrderNotifications} icon={Bell} compact /></span>}
+            {user?.role === 'user' && <span className="hidden sm:block"><CustomerIconLink to="/messages" label="Messages" count={unreadChats} icon={MessageCircle} compact /></span>}
             {/* Voice Order Button */}
             <button
               onClick={() => dispatch(toggleVoiceModal())}
@@ -151,7 +151,7 @@ const Navbar: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="btn btn-primary py-2">
+              <Link to="/login" className="btn btn-primary hidden py-2 min-[390px]:inline-flex">
                 Login
               </Link>
             )}
@@ -159,7 +159,9 @@ const Navbar: React.FC = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => dispatch(toggleMobileMenu())}
-              className="md:hidden p-2"
+              className="grid h-11 w-11 place-items-center rounded-xl md:hidden"
+              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -169,8 +171,8 @@ const Navbar: React.FC = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-white/10 bg-dark-200 animate-slide-down">
-          <div className="px-4 py-4 space-y-4">
+        <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-white/10 bg-dark-200 animate-slide-down md:hidden">
+          <div className="space-y-3 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
               <input
@@ -184,7 +186,10 @@ const Navbar: React.FC = () => {
             <Link to="/restaurants" className="block py-2 hover:text-primary-400">Restaurants</Link>
             <Link to="/orders" className="block py-2 hover:text-primary-400">Orders</Link>
             {user?.role === 'user' && <Link to="/favorites" className="block py-2 hover:text-primary-400">Favourites</Link>}
-            <div className="flex space-x-4 pt-4">
+            {user?.role === 'user' && <Link to="/notifications" className="flex items-center justify-between py-2 hover:text-primary-400"><span>Notifications</span>{unreadOrderNotifications > 0 && <span className="badge badge-error">{unreadOrderNotifications}</span>}</Link>}
+            {user?.role === 'user' && <Link to="/messages" className="flex items-center justify-between py-2 hover:text-primary-400"><span>Messages</span>{unreadChats > 0 && <span className="badge badge-error">{unreadChats}</span>}</Link>}
+            {!isAuthenticated && <Link to="/login" className="btn btn-primary w-full">Login</Link>}
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 onClick={() => dispatch(toggleVoiceModal())}
                 className="flex-1 btn btn-primary py-2"

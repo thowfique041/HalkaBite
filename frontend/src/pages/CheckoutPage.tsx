@@ -167,7 +167,7 @@ const CheckoutPage: React.FC = () => {
             className="lg:col-span-2 space-y-6"
           >
             {/* Delivery Address */}
-            <div className="card p-6">
+            <div className="card p-4 sm:p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-primary-500" />
                 Delivery Address
@@ -212,7 +212,7 @@ const CheckoutPage: React.FC = () => {
             </div>
 
             {/* Payment Method */}
-            <div className="card p-6">
+            <div className="card p-4 sm:p-6">
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-primary-500" />
                 Payment Method
@@ -235,7 +235,7 @@ const CheckoutPage: React.FC = () => {
             transition={{ delay: 0.2 }}
             className="lg:col-span-1"
           >
-            <div className="card p-6 sticky top-24">
+            <div className="card p-4 sm:p-6 lg:sticky lg:top-24">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-primary-500" />
                 Order Summary

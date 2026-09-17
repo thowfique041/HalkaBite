@@ -62,9 +62,9 @@ const Footer: React.FC = () => {
             <p className="text-white/40 text-sm">
               © {new Date().getFullYear()} HalkaBite. All rights reserved.
             </p>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
               <span className="text-white/40 text-sm">Payment Methods:</span>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap justify-center gap-2">
                 <span className="px-3 py-1 bg-pink-500/20 text-pink-400 rounded text-sm font-medium">bKash</span>
                 <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded text-sm font-medium">Nagad</span>
                 <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded text-sm font-medium">Rocket</span>

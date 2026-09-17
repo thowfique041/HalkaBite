@@ -41,7 +41,7 @@ const RestaurantLayout: React.FC = () => {
     ];
 
     return (
-        <div className="min-h-screen flex">
+        <div className="flex min-h-screen min-w-0">
             {/* Sidebar */}
             <aside className="w-64 bg-dark-200 border-r border-white/10 p-6 hidden lg:block">
                 <div className="mb-8">
@@ -82,12 +82,12 @@ const RestaurantLayout: React.FC = () => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
                 {/* Top Bar */}
-                <header className="bg-dark-200 border-b border-white/10 p-6">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="text-xl font-bold">Welcome back, {user.name}!</h1>
+                <header className="border-b border-white/10 bg-dark-200 p-4 sm:p-6">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <h1 className="truncate text-base font-bold sm:text-xl">Welcome back, {user.name}!</h1>
                             <p className="text-sm text-white/60">Manage your restaurant efficiently</p>
                         </div>
 
@@ -95,7 +95,7 @@ const RestaurantLayout: React.FC = () => {
                             <RestaurantNotificationCenter />
                         {/* Mobile Menu - Show dropdown on mobile */}
                         <div className="lg:hidden">
-                            <button onClick={() => setMobileMenuOpen(open => !open)} className="btn btn-outline" aria-expanded={mobileMenuOpen}>Menu</button>
+                            <button onClick={() => setMobileMenuOpen(open => !open)} className="btn btn-outline px-3" aria-expanded={mobileMenuOpen}>Menu</button>
                         </div>
                         </div>
                     </div>
@@ -122,7 +122,7 @@ const RestaurantLayout: React.FC = () => {
                 )}
 
                 {/* Page Content */}
-                <main className="p-6">
+                <main className="min-w-0 p-4 sm:p-6">
                     <Outlet />
                 </main>
             </div>

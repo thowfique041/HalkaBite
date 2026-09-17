@@ -64,9 +64,9 @@ const CartSidebar: React.FC = () => {
       />
 
       {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-dark-200 border-l border-white/10 z-50 flex flex-col animate-slide-up">
+      <div className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full max-w-md flex-col border-l border-white/10 bg-dark-200 animate-slide-up">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/10">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-primary-400" />
             <h2 className="text-lg font-semibold">Your Cart</h2>
@@ -180,7 +180,7 @@ const CartSidebar: React.FC = () => {
 
         {/* Footer */}
         {cart && cart.cart.items.length > 0 && (
-          <div className="p-4 border-t border-white/10 space-y-4">
+          <div className="space-y-3 border-t border-white/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:space-y-4">
             <div className="flex justify-between text-lg font-semibold">
               <span>Subtotal</span>
               <span className="text-primary-400">৳{Math.round(cart.subtotal)}</span>

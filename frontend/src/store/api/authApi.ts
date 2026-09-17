@@ -56,6 +56,9 @@ export const authApi = apiSlice.injectEndpoints({
         try { const { data } = await queryFulfilled; if (data.data) dispatch(setUser(data.data)); } catch { /* rendered by the caller */ }
       },
     }),
+    googleLogin: builder.mutation<ApiResponse<AuthResponse>, { credential: string }>({
+      query: body => ({ url: '/auth/google', method: 'POST', body }),
+    }),
     getFavorites: builder.query<ApiResponse<FoodItem[]>, void>({
       query: () => '/auth/favorites',
       providesTags: ['User'],
@@ -96,6 +99,7 @@ export const authApi = apiSlice.injectEndpoints({
 
 export const {
   useLoginMutation,
+  useGoogleLoginMutation,
   useRegisterMutation,
   useLogoutMutation,
   useGetMeQuery,

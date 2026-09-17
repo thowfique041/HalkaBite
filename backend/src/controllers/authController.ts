@@ -6,6 +6,7 @@ import { AuthRequest } from '../middleware/auth';
 import cloudinary from '../config/cloudinary';
 import crypto from 'crypto';
 import { uploadImageBuffer } from './uploadController';
+import { OAuth2Client } from 'google-auth-library';
 
 const profileFields = ['name', 'username', 'email', 'phone', 'bio'] as const;
 const publicIdFromUrl = (url?: string) => {
@@ -225,6 +226,56 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       success: false,
       message: error.message || 'Server error'
     });
+  }
+};
+
+// @desc    Sign in or register using a verified Google ID token
+// @route   POST /api/auth/google
+// @access  Public
+export const googleLogin = async (req: AuthRequest, res: Response) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    if (!clientId) return res.status(503).json({ success: false, message: 'Google sign-in is not configured yet' });
+    const credential = typeof req.body?.credential === 'string' ? req.body.credential : '';
+    if (!credential) return res.status(400).json({ success: false, message: 'Google credential is required' });
+
+    const ticket = await new OAuth2Client(clientId).verifyIdToken({ idToken: credential, audience: clientId });
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload.email_verified || !payload.sub) {
+      return res.status(401).json({ success: false, message: 'Google account could not be verified' });
+    }
+
+    let user = await User.findOne({ email: payload.email.toLowerCase() });
+    if (!user) {
+      user = await User.create({
+        name: payload.name?.trim() || payload.email.split('@')[0],
+        email: payload.email.toLowerCase(),
+        password: crypto.randomBytes(32).toString('hex'),
+        avatar: payload.picture,
+        isVerified: true
+      });
+      sendWelcomeEmail(user.email, user.name).catch(console.error);
+    } else if (!user.isVerified || (!user.avatar && payload.picture)) {
+      user = await User.findByIdAndUpdate(user._id, {
+        $set: { isVerified: true, ...(!user.avatar && payload.picture ? { avatar: payload.picture } : {}) }
+      }, { new: true }) || user;
+    }
+
+    user.lastLogin = new Date();
+    await User.updateOne({ _id: user._id }, { $set: { lastLogin: user.lastLogin } });
+    const sessionId = await createSession(String(user._id), req);
+    const token = generateToken(user, sessionId);
+    req.user = user;
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+    return res.json({ success: true, message: 'Signed in with Google', data: { user: safeUser(user), token } });
+  } catch (error) {
+    console.error('Google sign-in failed:', error);
+    return res.status(401).json({ success: false, message: 'Google sign-in failed. Please try again.' });
   }
 };
 

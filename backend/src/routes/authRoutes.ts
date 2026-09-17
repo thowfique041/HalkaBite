@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   register,
   login,
+  googleLogin,
   logout,
   getMe,
   updateProfile,
@@ -19,6 +20,7 @@ const router = Router();
 
 router.post('/register', authRateLimit, register);
 router.post('/login', authRateLimit, login);
+router.post('/google', authRateLimit, googleLogin);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.get('/favorites', protect, getFavorites);

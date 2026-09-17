@@ -46,6 +46,7 @@ const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
   .split(',')
   .map(origin => origin.trim())
   .filter(Boolean);
+const googleIdentityOrigins = new Set(['https://accounts.google.com']);
 
 let initializationPromise: Promise<void> | undefined;
 const initializeApplication = () => {
@@ -68,7 +69,7 @@ const initializeApplication = () => {
 app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin || allowedOrigins.includes(origin) || googleIdentityOrigins.has(origin)) return callback(null, true);
     return callback(new Error('Origin is not allowed by CORS'));
   },
   credentials: true

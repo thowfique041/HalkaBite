@@ -67,13 +67,19 @@ const initializeApplication = () => {
 
 // Middleware
 app.use(helmet());
-app.use(cors({
+const corsMiddleware = cors({
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin) || googleIdentityOrigins.has(origin)) return callback(null, true);
     return callback(new Error('Origin is not allowed by CORS'));
   },
   credentials: true
-}));
+});
+app.use((req, res, next) => {
+  // Google Identity redirect mode is a top-level form POST, not a browser API call.
+  // The route validates both Google's double-submit CSRF token and signed ID token.
+  if (req.method === 'POST' && req.path === '/api/auth/google/redirect') return next();
+  return corsMiddleware(req, res, next);
+});
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb', parameterLimit: 100 }));
 app.use(cookieParser());

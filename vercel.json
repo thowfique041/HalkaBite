@@ -47,6 +47,20 @@
       }
     },
     {
+      "source": "/privacy.html",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    },
+    {
+      "source": "/terms.html",
+      "destination": {
+        "type": "service",
+        "service": "frontend"
+      }
+    },
+    {
       "source": "/sw.js",
       "destination": {
         "type": "service",

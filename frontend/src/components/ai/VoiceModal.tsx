@@ -115,8 +115,8 @@ const VoiceModal: React.FC = () => {
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div className="card w-full max-w-md p-8 text-center animate-scale-up">
+      <div onMouseDown={() => dispatch(toggleVoiceModal())} className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-label="Voice ordering" className="card w-full max-w-md p-8 text-center animate-scale-up">
           {/* Close Button */}
           <button
             onClick={() => dispatch(toggleVoiceModal())}

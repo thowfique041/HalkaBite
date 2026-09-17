@@ -17,8 +17,8 @@ const statusStyle: Record<string, string> = {
 const DeliveryManModal: React.FC<{ id: string; onClose: () => void }> = ({ id, onClose }) => {
   const { data, isLoading } = useGetDeliveryManDetailsQuery(id, { pollingInterval: 5000 });
   const man = data?.data;
-  return <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
-    <div className="bg-dark-200 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
+  return <div onMouseDown={onClose} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center">
+    <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" className="bg-dark-200 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto">
       <div className="sticky top-0 bg-dark-200 border-b border-white/10 p-5 flex justify-between z-10"><h2 className="text-xl font-bold">Delivery Man Profile</h2><button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X /></button></div>
       {isLoading || !man ? <div className="p-12 text-center">Loading profile...</div> : <div className="p-6 space-y-6">
         <div className="flex flex-col sm:flex-row gap-5"><div className="w-24 h-24 rounded-2xl bg-white/5 overflow-hidden flex items-center justify-center shrink-0">{man.avatar ? <img src={man.avatar} alt={man.name} className="w-full h-full object-cover" /> : <Users className="text-white/20" />}</div><div><h3 className="text-2xl font-bold">{man.name}</h3><p className="font-mono text-sm text-white/50">ID: {man._id}</p><p className="text-white/60">{man.phone || 'No phone'} · {man.email}</p><span className={`inline-block mt-2 px-3 py-1 rounded-full border text-xs capitalize ${statusStyle[man.status]}`}>{man.status}</span></div></div>

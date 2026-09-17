@@ -122,8 +122,8 @@ const MenuPage: React.FC = () => {
             </div>
 
             {isCategoryModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <div className="bg-dark-200 rounded-2xl w-full max-w-lg border border-white/10">
+                <div onMouseDown={() => setIsCategoryModalOpen(false)} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" className="bg-dark-200 rounded-2xl w-full max-w-lg border border-white/10">
                         <div className="p-6 border-b border-white/10 flex justify-between items-center">
                             <h2 className="text-xl font-bold">Add Category</h2>
                             <button

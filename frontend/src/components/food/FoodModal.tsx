@@ -52,8 +52,8 @@ const FoodModal: React.FC<FoodModalProps> = ({ food, isOpen, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-            <div className="max-h-[96dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-white/10 bg-dark-200 shadow-2xl animate-in fade-in zoom-in duration-200 sm:max-h-[92vh] sm:rounded-2xl">
+        <div onMouseDown={onClose} className="fixed inset-0 z-50 flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+            <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={food.name} className="max-h-[96dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl border border-white/10 bg-dark-200 shadow-2xl animate-in fade-in zoom-in duration-200 sm:max-h-[92vh] sm:rounded-2xl">
                 <div className="relative h-48 sm:h-64">
                     <img
                         src={food.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500'}

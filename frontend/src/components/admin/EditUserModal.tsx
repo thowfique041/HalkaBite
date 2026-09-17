@@ -45,7 +45,7 @@ const RoleForm: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user }) => {
     if (!isOpen || !user) return null;
-    return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"><div className="bg-dark-200 rounded-2xl w-full max-w-lg border border-white/10"><div className="p-6 border-b border-white/10 flex justify-between items-center"><div><h2 className="text-xl font-bold">Change User Role</h2><p className="text-xs text-white/40 mt-1">Administrative access is restricted to role changes.</p></div><button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button></div><RoleForm key={user._id} user={user} onClose={onClose} /></div></div>;
+    return <div onMouseDown={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"><div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" className="bg-dark-200 rounded-2xl w-full max-w-lg border border-white/10"><div className="p-6 border-b border-white/10 flex justify-between items-center"><div><h2 className="text-xl font-bold">Change User Role</h2><p className="text-xs text-white/40 mt-1">Administrative access is restricted to role changes.</p></div><button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg"><X className="w-5 h-5" /></button></div><RoleForm key={user._id} user={user} onClose={onClose} /></div></div>;
 };
 
 export default EditUserModal;

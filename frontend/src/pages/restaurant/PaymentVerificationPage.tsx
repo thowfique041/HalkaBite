@@ -62,8 +62,8 @@ const PaymentVerificationPage: React.FC = () => {
         </div>
       </article>;
     })}</div>
-    {rejection && <div className="fixed inset-0 z-[90] grid place-items-center bg-black/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="reject-payment-title">
-      <div className="card w-full max-w-md p-6">
+    {rejection && <div onMouseDown={() => setRejection(null)} className="fixed inset-0 z-[90] grid place-items-center bg-black/75 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="reject-payment-title">
+      <div onMouseDown={event => event.stopPropagation()} className="card w-full max-w-md p-6">
         <div className="flex items-center justify-between gap-4">
           <h2 id="reject-payment-title" className="text-xl font-bold">Reject Payment</h2>
           <button type="button" onClick={() => setRejection(null)} className="rounded-lg p-2 text-white/50 hover:bg-white/10 hover:text-white" aria-label="Close rejection dialog"><X className="w-5 h-5"/></button>

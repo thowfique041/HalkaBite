@@ -90,9 +90,10 @@ const AddRestaurantModal: React.FC<AddRestaurantModalProps> = ({ isOpen, onClose
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
+                        onMouseDown={onClose}
                         className="fixed inset-0 flex items-center justify-center z-50 p-4"
                     >
-                        <div className="bg-dark-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/10">
+                        <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" className="bg-dark-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/10">
                             <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-dark-200 z-10">
                                 <h2 className="text-xl font-bold">Add New Restaurant</h2>
                                 <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">

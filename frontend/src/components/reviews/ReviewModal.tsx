@@ -41,8 +41,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ order, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="card w-full max-w-lg p-6">
+    <div onMouseDown={onClose} className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" className="card w-full max-w-lg p-6">
         <div className="flex justify-between items-start mb-6">
           <div>
             <h2 className="text-xl font-bold">Rate Your Order</h2>

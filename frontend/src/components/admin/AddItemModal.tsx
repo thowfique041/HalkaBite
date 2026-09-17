@@ -79,8 +79,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, item }) =>
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <div className="bg-dark-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/10">
+        <div onMouseDown={onClose} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div onMouseDown={event => event.stopPropagation()} role="dialog" aria-modal="true" className="bg-dark-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-white/10">
                 <div className="p-6 border-b border-white/10 flex justify-between items-center sticky top-0 bg-dark-200 z-10">
                     <h2 className="text-xl font-bold">{item ? 'Edit Menu Item' : 'Add New Item'}</h2>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">

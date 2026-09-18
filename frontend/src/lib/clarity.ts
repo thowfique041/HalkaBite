@@ -1,4 +1,5 @@
 const CLARITY_SCRIPT_ID = 'microsoft-clarity';
+type ClarityCommand = ((...args: unknown[]) => void) & { q?: unknown[][] };
 const SENSITIVE_SELECTOR = [
   'input[type="password"]',
   'input[type="email"]',
@@ -36,6 +37,14 @@ export const initializeClarity = () => {
     }));
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  const clarityWindow = window as Window & { clarity?: ClarityCommand };
+  if (!clarityWindow.clarity) {
+    const clarity: ClarityCommand = (...args: unknown[]) => {
+      (clarity.q ??= []).push(args);
+    };
+    clarityWindow.clarity = clarity;
+  }
 
   const script = document.createElement('script');
   script.id = CLARITY_SCRIPT_ID;
